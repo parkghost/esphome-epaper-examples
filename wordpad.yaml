@@ -1,0 +1,200 @@
+substitutions:
+  device_name: wordpad
+  friendly_name: WordPad
+  display_model: gdeh029a1
+  display_rotation: "270"
+  display_update_interval: never
+  display_full_update_every: "10"
+  font_size: "20"
+  glyph_test: "回"
+  wordpad_content_source: input_text.wordpad_display_content
+
+packages:
+  board: !include boards/esp32c3/nologo_esp32c3_super_mini_plus_epd_v1.yaml
+  device_web: !include templates/device_web.yaml
+  epd_toolkit: !include common/epd/toolkit.yaml
+  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+  epd_metrics: !include common/epd/metrics.yaml
+
+logger:
+  level: DEBUG
+  # baud_rate: 0
+
+esphome:
+  # platformio_options:
+  #   board_build.partitions: C:\...\boards\partitions\partitions_4m_no_ota.csv # absolute path
+
+text_sensor:
+  - platform: homeassistant
+    entity_id: $wordpad_content_source
+    id: content
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "content_change"
+
+external_components:
+  - source: github://parkghost/epd
+    components: [ waveshare_epaper ]
+
+# text:
+#   - platform: template
+#     id: content
+#     name: "Content"
+#     optimistic: true
+#     min_length: 0
+#     max_length: 255
+#     mode: text
+#     on_value:
+#       - script.execute:
+#           id: fire_refresh_event
+#           name: "content_change"
+
+script:
+  - id: fire_refresh_event
+    parameters:
+      name: string
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGW("main", "Event %s fired", name.c_str());
+          id(refresh_and_wait)->execute(name);
+      - delay: 1s
+
+font:
+  - file: "resources/fonts/NotoSansTC-Light.ttf"
+    id: tc_font
+    size: $font_size
+    glyphsets:
+      - GF_Latin_Kernel
+    ignore_missing_glyphs: true
+    glyphs:
+      - !include resources/glyphsets/tc_jf7000.yaml
+      # - !include resources/glyphsets/tc_common.yaml
+      # - !include resources/glyphsets/symbol.yaml
+      # - !include resources/glyphsets/custom.yaml
+
+display:
+  - platform: waveshare_epaper
+    id: !extend my_display
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      if(id(display_white_screen).state){
+        return;
+      }
+
+      if(!id(content).has_state() || id(content).state == ""){
+        return;
+      }
+
+      int screen_width = it.get_width();
+      int screen_height = it.get_height();
+      auto font = id(tc_font);
+      int font_width; 
+      int font_height;
+      int font_baseline;
+      int font_x_offset;
+      font->measure("$glyph_test", &font_width, &font_x_offset, &font_baseline, &font_height);
+      int line_height = $font_size;
+
+      std::string text = id(content).state;
+      ESP_LOGD("display", "text:%s", text);
+
+      int y = (screen_height % line_height) / 2 + (line_height - font_height) / 2;  
+
+      int start = 0;
+      int length = text.length();
+
+      auto extract_utf8_char = [](const std::string &text, int &index) -> std::string {
+        std::string current_char;
+        char c = text[index];
+        if ((c & 0x80) == 0) {
+            // Single-byte character (ASCII)
+            current_char = text.substr(index, 1);
+            index += 1;
+        } else if ((c & 0xE0) == 0xC0) {
+            // Two-byte character
+            current_char = text.substr(index, 2);
+            index += 2;
+        } else if ((c & 0xF0) == 0xE0) {
+            // Three-byte character (common for Chinese)
+            current_char = text.substr(index, 3);
+            index += 3;
+        } else if ((c & 0xF8) == 0xF0) {
+            // Four-byte character (rare)
+            current_char = text.substr(index, 4);
+            index += 4;
+        } else {
+            // Invalid UTF-8, skip
+            index += 1;
+        }
+        return current_char;
+      };
+
+      std::vector<std::string> lines; // Store all lines for later processing
+      int max_line_width = 0; // Track the maximum line width
+
+      while (start < length) {
+        int line_width = 0;
+        int end = start;
+        std::string current_line; // Accumulate characters for the current line
+
+        while (end < length) {
+            // Extract a UTF-8 character
+            std::string current_char = extract_utf8_char(text, end);
+            if (current_char.empty()) {
+                // Skip invalid UTF-8 character
+                continue;
+            }
+
+            // Add the character to the current line
+            current_line += current_char;
+
+            // Measure the width of the accumulated line
+            int x1 = 0;
+            int y1 = 0;
+            int width = 0;
+            int height = 0;
+            it.get_text_bounds(0, 0, current_line.c_str(), font, TextAlign::TOP_LEFT, &x1, &y1, &width, &height);
+
+            if (width > screen_width) {
+                // Line is full, remove the last character and break
+                current_line.erase(current_line.size() - current_char.size());
+                end -= current_char.size();
+                break;
+            }
+        }
+
+        // Measure the final width of the current line
+        int x1 = 0;
+        int y1 = 0;
+        int width = 0;
+        int height = 0;
+        it.get_text_bounds(0, 0, current_line.c_str(), font, TextAlign::TOP_LEFT, &x1, &y1, &width, &height);
+
+        // Update the maximum line width
+        if (width > max_line_width) {
+            max_line_width = width;
+        }
+
+        // Store the current line and move to the next
+        lines.push_back(current_line);
+        start = end;
+
+        // Stop if the next line would exceed the screen height
+        if(lines.size()+1 > screen_height / line_height){
+          break;
+        } 
+      }
+
+      // Calculate the unified x position based on the maximum line width
+      int x = (screen_width - max_line_width) / 2;
+
+      // Print each line starting from the first
+      for (const auto &line : lines) {
+        it.print(x, y, font, TextAlign::TOP_LEFT, line.c_str());
+        y += line_height;
+      }

@@ -1,0 +1,47 @@
+substitutions:
+  device_name: s3b1v1depg0420
+  friendly_name: S3B1V1DEPG0420
+  display_model: depg0420
+  display_rotation: "0"
+  display_update_interval: 60s
+  display_full_update_every: "30"
+
+external_components:
+  - source: github://parkghost/epd
+    components: [ waveshare_epaper ]
+
+packages:
+  board: !include ../boards/esp32s3/waveshare_esp32_s3_zero_epd_v1.yaml
+  device_web: !include ../templates/device_standalone.yaml
+  epd_toolkit: !include ../common/epd/toolkit.yaml
+  epd_toolkit_ext: !include ../common/epd/toolkit_ext.yaml
+
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 300
+    id: time_font
+    size: 160
+    glyphs: [":0123456789"]
+
+display:
+  - platform: waveshare_epaper
+    id: !extend my_display
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      int width = it.get_width();
+      int height = it.get_height();
+      const auto BLACK   = Color(0,   0,   0,   0);
+      const auto RED     = Color(255, 0,   0,   0);
+      const auto WHITE   = Color(255, 255, 255, 0);
+      it.fill(WHITE);
+      if (id(display_white_screen).state) {
+        return;
+      }      
+
+      auto time = id(esp_time).now();
+      it.strftime(width/2, height/2, id(time_font), RED, TextAlign::CENTER, "%H:%M",time);

@@ -1,0 +1,180 @@
+substitutions:
+  device_name: calendar
+  friendly_name: Calendar
+  timezone: Asia/Taipei
+  display_model: depg0420
+  display_rotation: "0"
+  display_update_interval: never
+  display_full_update_every: "1"
+  highlight_color: RED # RED, BLACK
+
+packages:
+  board: !include boards/esp32s3/waveshare_esp32_s3_zero_epd_v1.yaml
+  device_web: !include templates/device_standalone.yaml
+  epd_toolkit: !include common/epd/toolkit.yaml
+  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+
+external_components:
+  - source: github://parkghost/epd
+    components: [ waveshare_epaper ]
+
+logger:
+  level: DEBUG
+  # baud_rate: 0
+
+globals:
+  - id: initial
+    type: bool
+    initial_value: "false"
+
+esphome:
+  on_boot:
+    - priority: 200
+      then:
+        - script.execute: fire_refresh_event
+
+time:
+  - platform: sntp
+    id: !extend esp_time
+    on_time:
+      - cron: "0 0 0 * * *"
+        then:
+          - script.execute: fire_refresh_event
+
+    on_time_sync:
+      - lambda: |-
+          if(!id(initial)){
+            id(fire_refresh_event).execute();
+          }
+
+script:
+  - id: fire_refresh_event
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGW("main", "Event fired");
+          id(refresh_and_wait).execute("");
+      - delay: 1s
+
+font:
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: title_font
+    size: 32
+    glyphs: " .0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ年月星期日一二三四五六"
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: weekday_font
+    size: 25
+    glyphs: "日一二三四五六"
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: day_font
+    size: 30
+    glyphs: "0123456789"
+
+display:
+  - platform: waveshare_epaper
+    id: !extend my_display
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      int width = it.get_width();
+      int height = it.get_height();
+      auto BLACK   = Color(0,   0,   0,   0);
+      auto RED     = Color(255, 0,   0,   0);
+      auto GREEN   = Color(0,   255, 0,   0);
+      auto BLUE    = Color(0,   0,   255, 0);
+      auto YELLOW  = Color(255, 255, 0,   0);
+      auto ORANGE  = Color(255, 127, 0,   0);
+      auto WHITE   = Color(255, 255, 255, 0);
+      if (it.get_display_type() == DisplayType::DISPLAY_TYPE_BINARY) {
+        BLACK = COLOR_ON;
+        WHITE = COLOR_OFF;
+      } else if (it.get_display_type() == DisplayType::DISPLAY_TYPE_COLOR) {
+        it.fill(WHITE);
+      }
+
+      if (id(display_white_screen).state) {
+        return;
+      }
+
+      auto tm = id(esp_time).now();
+      if (!tm.is_valid())
+      {
+        if (!id(wifi_id).is_connected())
+        {
+          it.print(width / 2, height / 2, id(title_font), BLACK, TextAlign::CENTER, "WiFi Connecting");
+          return;
+        }
+
+        it.print(width / 2, height / 2, id(title_font), BLACK, TextAlign::CENTER, "Time Synchronization");
+        return;
+      }
+      id(initial) = true;
+
+      // calculates the number of days in the current month
+      uint8_t days_in_month = esphome::days_in_month(tm.month, tm.year);
+
+      // calculates the day of the week for the first day of the current month.
+      int days_passed = tm.day_of_month;
+      int first_day = (tm.day_of_week - days_passed) % 7;
+      if (first_day < 0)
+        first_day += 7;
+
+      // calculate how many weeks are in the current month
+      int total_weeks = ((first_day + days_in_month - 1) / 7) + 1;
+
+      int top_offset = 7;
+
+      // top title
+      const char *weekdays[] = {"日", "一", "二", "三", "四", "五", "六"};
+      it.printf(width / 2, top_offset, id(title_font), BLACK, TextAlign::TOP_CENTER,
+                "%04d年%02d月%02d日 星期%s", tm.year, tm.month, tm.day_of_month, weekdays[tm.day_of_week - 1]);
+      top_offset += 40;
+
+      // weekday header row
+      int cell_width = width / 7;
+      int cell_height = 30;
+      it.filled_rectangle(0, top_offset, width, cell_height, BLACK);
+      it.filled_rectangle(0, top_offset, cell_width, cell_height, $highlight_color);
+      it.filled_rectangle(6 * cell_width, top_offset, width - 6 * cell_width, cell_height, $highlight_color);
+      for (int i = 0; i < 7; i++)
+      {
+        it.printf(i * cell_width + cell_width / 2, top_offset + cell_height / 2, id(weekday_font), WHITE, TextAlign::CENTER, weekdays[i]);
+      }
+      top_offset += cell_height;
+
+      // draw the dates
+      cell_height = (height - top_offset) / total_weeks;
+      int day_counter = 1;
+
+      for (int row = 0; row < 6; row++)
+      {
+        for (int col = 0; col < 7; col++)
+        {
+          int x = col * cell_width;
+          int y = top_offset + row * cell_height;
+
+          // skip blank cells in the first row, if the month doesn't start on Sunday
+          if (row == 0 && col < first_day)
+            continue;
+
+          // stop if the day counter exceeds the number of days in the month
+          if (day_counter > days_in_month)
+            break;
+
+          // highlight today's date
+          if (day_counter == tm.day_of_month)
+          {
+            int outline_width = 2;
+            it.filled_rectangle(x, y, cell_width, cell_height, $highlight_color);
+            it.filled_rectangle(x + outline_width, y + outline_width, cell_width - outline_width * 2, cell_height - outline_width * 2, WHITE);
+          }
+
+          Color dayColor = (col == 0 || col == 6) ? $highlight_color : BLACK;
+          it.printf(x + cell_width / 2, y + cell_height / 2, id(day_font), dayColor, TextAlign::CENTER, "%d", day_counter);
+          day_counter++;
+        }
+      }

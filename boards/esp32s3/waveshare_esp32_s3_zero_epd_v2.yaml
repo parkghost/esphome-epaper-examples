@@ -1,0 +1,14 @@
+packages:
+  mainboard: !include waveshare_esp32_s3_zero.yaml
+
+spi:
+  clk_pin: GPIO4
+  mosi_pin: GPIO3
+
+display:
+  - platform: waveshare_epaper
+    id: my_display
+    reset_pin: GPIO2
+    dc_pin:  GPIO1
+    cs_pin: GPIO5
+    busy_pin: GPIO6

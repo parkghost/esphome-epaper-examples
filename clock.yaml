@@ -1,0 +1,183 @@
+substitutions:
+  device_name: clock
+  friendly_name: 時鐘
+  timezone: Asia/Taipei
+  display_model: gdeh029a1
+  display_rotation: "270"
+  display_update_interval: never
+  display_full_update_every: "30"
+  time_sync_interval_in_hours: "6"
+  wait_for_time_sync: "false"
+
+external_components:
+  - source: github://parkghost/epd
+    components: [ waveshare_epaper ]
+
+esphome:
+  name: $device_name
+  friendly_name: $friendly_name
+  on_boot:
+    - delay: 3s
+    - if:
+        condition:
+          not:
+            time.has_time:
+        then:
+          - wifi.enable:
+
+esp32:
+  board: esp32-c3-devkitm-1
+  framework:
+    type: esp-idf
+
+logger:
+  level: DEBUG
+  baud_rate: 0
+
+wifi:
+  id: wifi_id
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  fast_connect: true
+  enable_on_boot: false
+  on_connect:
+    - script.execute: force_sync_time
+    - script.execute: update_display
+  on_disconnect:
+    - script.execute: update_display
+
+deep_sleep:
+  id: deep_sleep_1
+
+time:
+  - platform: sntp
+    id: ntp_time
+    timezone: $timezone
+    servers:
+      - time1.google.com
+      - time2.google.com
+      - time3.google.com
+
+    on_time:
+      - cron: "0 * * * * *"
+        then:
+          - script.execute: update_display
+          - delay: 5s
+          - lambda: |-
+              if($wait_for_time_sync && id(wifi_id)->is_connected()){ // until time is synchronized
+                return;
+              }
+
+              auto time = id(ntp_time).now();
+              if(time.minute == 0 && time.hour % $time_sync_interval_in_hours == 0){
+                id(disable_deep_sleep).execute();
+                return;
+              }
+              id(enter_deep_sleep).execute();
+
+    on_time_sync:
+      - script.execute: update_display
+      - delay: 5s
+      - wifi.disable:
+
+script:
+  - id: update_display
+    mode: single
+    then:
+      - component.update: my_display
+      - delay: 1s
+
+  - id: enter_deep_sleep
+    then:
+      - logger.log: "Enter Deep Sleep"
+      - if:
+          condition:
+            lambda: return id(ntp_time).now().second < 55;
+          then:
+            - deep_sleep.enter:
+                id: deep_sleep_1
+                sleep_duration: !lambda return (55 - id(ntp_time).now().second)*1000;
+
+  - id: disable_deep_sleep
+    then:
+      - logger.log: "Disable Deep Sleep"
+      - wifi.enable:
+
+  - id: force_sync_time
+    then:
+      - logger.log: "Force Sync Time"
+      - lambda: |-
+          id(ntp_time).update(); // The esp-idf framework does not support forced synchronization time
+
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 500
+    id: font24
+    size: 24
+    glyphs: ["."]
+
+  - file: "gfonts://Material+Symbols+Outlined"
+    id: icon_font
+    size: 20
+    glyphs:
+      - "\U0000e63e" # wifi
+
+  - file:
+      type: gfonts
+      family: Noto+Sans+TC
+      weight: 500
+    id: date_week_font
+    size: 20
+    glyphs: [" ()/-,0123456789週日一二三四五六"]
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 300
+    id: time_font
+    size: 120
+    glyphs: [":0123456789"]
+
+spi:
+  clk_pin: GPIO6
+  mosi_pin: GPIO7
+
+display:
+  - platform: waveshare_epaper
+    id: my_display
+    reset_pin: GPIO4
+    dc_pin:  GPIO3
+    cs_pin: GPIO10
+    busy_pin: GPIO20
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      int width = it.get_width();
+      int height = it.get_height();
+
+      // Header
+      if(id(wifi_id)->is_connected()){
+        it.printf(0, 0, id(icon_font), TextAlign::TOP_LEFT, "\U0000e63e");
+      }
+
+      auto time = id(ntp_time).now();
+      if(!time.is_valid()){
+        it.printf(width/2, height/2, id(font24), TextAlign::CENTER, "....");
+        return;
+      }
+
+      auto now_tm = time.to_c_tm();
+      it.printf(width/2, -4, id(date_week_font), TextAlign::TOP_CENTER, "%d-%d-%d", now_tm.tm_year+1900, now_tm.tm_mon+1, now_tm.tm_mday);
+
+      const char* weekdays[] = {"週日", "週一", "週二", "週三", "週四", "週五", "週六"};
+      const char* weekday = weekdays[now_tm.tm_wday];
+      if(weekday != NULL){
+        it.printf(width-10, -4, id(date_week_font), TextAlign::TOP_RIGHT, "%s", weekday);
+      }
+
+      // Clock
+      it.strftime(width/2, height/2+10, id(time_font), TextAlign::CENTER, "%H:%M",time);

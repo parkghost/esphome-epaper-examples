@@ -1,0 +1,294 @@
+substitutions:
+  device_name: digital-photo-frame
+  friendly_name: Digital Photo Frame
+  timezone: Asia/Taipei
+  display_model: depg0420
+  display_rotation: "0"
+  color_palette: RED,WHITE,BLACK
+  display_update_interval: never
+  display_full_update_every: "30"
+  online_image_update_trigger: "0 /30 6-23 * * *" # cron spec
+  online_image_url: https://picsum.photos/400/300.webp
+  online_image_format: webp
+  online_image_type: RGB
+  image_adjustment_gamma: "0.7"
+  image_adjustment_brightness: "15"
+  image_adjustment_contrast: "1.1"
+
+packages:
+  board: !include boards/esp32s3/waveshare_esp32_s3_zero_epd_v1.yaml
+  device_web: !include templates/device_standalone.yaml
+  epd_toolkit: !include common/epd/toolkit.yaml
+  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+
+external_components:
+  - source: github://parkghost/epd
+    components: [ waveshare_epaper ]
+
+  - source: github://pr#8284 # webp image format
+    components: [online_image]
+
+logger:
+  level: DEBUG
+  # baud_rate: 0
+
+safe_mode:
+  num_attempts: 99
+
+esphome:
+  includes:
+    - "include/floyd_steinberg_dither.h"
+
+web_server:
+  version: 3
+  sorting_groups:
+    - id: photo_group
+      name: "Photo"
+      sorting_weight: -10
+
+    - id: image_adjustment_group
+      name: "Image Adjustment"
+      sorting_weight: -9
+
+globals:
+  - id: initial
+    type: bool
+    initial_value: "false"
+
+wifi:
+  on_connect:
+    - lambda: |-
+        if (!id(initial)) {
+          id(update_photo).execute();
+        }
+
+time:
+  - platform: sntp
+    id: !extend esp_time
+    on_time:
+      - cron: "$online_image_update_trigger"
+        then:
+          - script.execute: update_photo
+
+switch:
+  - platform: template
+    name: "Image Adjustment"
+    id: image_adjustment
+    optimistic: true
+    web_server:
+      sorting_group_id: image_adjustment_group
+      sorting_weight: -1
+    on_turn_on:
+      - lambda: |-
+          if (initial) {
+            id(fire_refresh_event).execute("image_adjustment_on");
+          }
+
+    on_turn_off:
+      - lambda: |-
+          if (initial) {
+            id(fire_refresh_event).execute("image_adjustment_off");
+          }
+
+number:
+  - platform: template
+    id: img_gamma
+    name: "Gamma"
+    optimistic: true
+    min_value: 0.1
+    max_value: 5
+    step: 0.1
+    mode: slider
+    initial_value: $image_adjustment_gamma
+    web_server:
+      sorting_group_id: image_adjustment_group
+    on_value:
+      - lambda: |-
+          if (initial && id(image_adjustment).state) {
+            id(fire_refresh_event).execute("gamma=" + to_string(x));
+          }
+
+  - platform: template
+    id: img_brightness
+    name: "Brightness"
+    optimistic: true
+    min_value: -255
+    max_value: 255
+    step: 1
+    mode: slider
+    initial_value: $image_adjustment_brightness
+    web_server:
+      sorting_group_id: image_adjustment_group
+    on_value:
+      - lambda: |-
+          if (initial && id(image_adjustment).state) {
+            id(fire_refresh_event).execute("brightness=" + to_string(x));
+          }
+
+  - platform: template
+    id: img_contrast
+    name: "Contrast"
+    optimistic: true
+    min_value: 0
+    max_value: 3
+    step: 0.1
+    mode: slider
+    initial_value: $image_adjustment_contrast
+    web_server:
+      sorting_group_id: image_adjustment_group
+    on_value:
+      - lambda: |-
+          if (initial && id(image_adjustment).state) {
+            id(fire_refresh_event).execute("contrast=" + to_string(x));
+          }
+
+button:
+  - platform: template
+    name: "Update Photo"
+    web_server:
+      sorting_group_id: photo_group
+      sorting_weight: -1
+    on_press:
+      - script.execute: update_photo
+
+interval:
+  - interval: 5min
+    then:
+      - lambda: |-
+          if(!initial) {
+            id(update_photo).execute();
+          }
+
+  - interval: 30min
+    then:
+      - lambda: |-
+          if(initial) {
+            id(update_photo).execute();
+          }
+
+http_request:
+  id: httprequest
+  verify_ssl: false
+  timeout: 10s
+  watchdog_timeout: 30s
+
+online_image:
+  - url: $online_image_url
+    id: my_image
+    format: $online_image_format
+    type: $online_image_type
+    update_interval: never
+    on_download_finished:
+      - logger.log: "Download success"
+      - text_sensor.template.publish:
+          id: online_image_last_download_result
+          state: "Success"
+      - script.execute:
+          id: fire_refresh_event
+          name: "photo_update"
+
+    on_error:
+      - logger.log: "Download failed"
+      - text_sensor.template.publish:
+          id: online_image_last_download_result
+          state: "Failed"
+
+# image:
+#   - file: resources/images/867-800x480.jpg
+#     type: RGB
+#     id: my_image
+#     dither: FLOYDSTEINBERG
+#     resize: 400x300
+
+script:
+  - id: fire_refresh_event
+    mode: single
+    parameters:
+      name: string
+    then:
+      - lambda: |-
+          ESP_LOGW("main", "Event %s fired", name.c_str());
+          id(refresh_and_wait).execute(name);
+      - delay: 1s
+
+  - id: update_photo
+    mode: single
+    then:
+      if:
+        condition: wifi.connected
+        then:
+          - text_sensor.template.publish:
+              id: online_image_last_download_result
+              state: ""
+          - component.update: my_image
+
+text_sensor:
+  - platform: template
+    id: online_image_last_download_result
+    name: "Last Download Result"
+    web_server:
+      sorting_group_id: photo_group
+
+font:
+  - file: "gfonts://Roboto"
+    id: title_font
+    size: 32
+
+display:
+  - platform: waveshare_epaper
+    id: !extend my_display
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      int width = it.get_width();
+      int height = it.get_height();
+      const auto BLACK   = Color(0,   0,   0,   0);
+      const auto RED     = Color(255, 0,   0,   0);
+      const auto GREEN   = Color(0,   255, 0,   0);
+      const auto BLUE    = Color(0,   0,   255, 0);
+      const auto YELLOW  = Color(255, 255, 0,   0);
+      const auto ORANGE  = Color(255, 127, 0,   0);
+      const auto WHITE   = Color(255, 255, 255, 0);
+      if (it.get_display_type() == DisplayType::DISPLAY_TYPE_COLOR) {
+        it.fill(WHITE);
+      }
+
+      if (id(display_white_screen).state) {
+        return;
+      }
+
+      if (!id(wifi_id).is_connected()) {
+        it.print(width / 2, height / 2, id(title_font), BLACK, TextAlign::CENTER, "WiFi Connecting");
+        return;
+      }
+      id(initial) = true;
+
+      // method 1
+      // it.image(0, 0, id(my_image), ImageAlign::TOP_LEFT);
+
+      // method 2
+      // auto image = id(my_image);
+      // int img_width = image->get_width();
+      // int img_height = image->get_height();
+      // for(int x=0; x<img_width; x++){
+      //   for(int y=0; y<img_height; y++){
+      //     Color pixel = image->get_pixel(x, y);
+      //     Color newColor = WHITE;
+
+      //     if (pixel.r > 128 && pixel.g < 128 && pixel.b < 128)
+      //         newColor = RED;
+      //     else if (pixel.r + pixel.g + pixel.b < 384)
+      //         newColor = BLACK;
+      //     else
+      //         newColor = WHITE;
+      //     it.draw_pixel_at(x, y, newColor);
+      //   }
+      // }
+
+
+      // method 3
+      FloydSteinbergDither image_processor;
+      image_processor.configure(id(image_adjustment).state, id(img_gamma).state, id(img_brightness).state, id(img_contrast).state);
+      image_processor.draw_dither_image(it, 0, 0, *id(my_image), std::vector<Color>{$color_palette});

@@ -1,0 +1,602 @@
+substitutions:
+  device_name: dashboard
+  friendly_name: Dashboard
+  display_model: gdeh029a1
+  display_rotation: "270"
+  display_update_interval: never
+  display_full_update_every: "30"
+  alarm_threshold_indoor_temp: "30"
+  alarm_threshold_indoor_co2: "1000"
+  alarm_threshold_indoor_pm25: "20"
+  alarm_threshold_outdoor_high_temp: "35"
+  alarm_threshold_outdoor_low_temp: "20"
+  alarm_threshold_outdoor_pop: "30"
+  alarm_threshold_outdoor_aqi: "50"
+
+packages:
+  board: !include boards/esp32c3/nologo_esp32c3_super_mini_plus_epd_v1.yaml
+  device_web: !include templates/device_web.yaml
+  epd_toolkit: !include common/epd/toolkit.yaml
+  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+  epd_metrics: !include common/epd/metrics.yaml
+  epd_writeback: !include common/epd/writeback.yaml
+
+external_components:
+  - source: github://parkghost/epd
+    components: [ waveshare_epaper ]
+
+logger:
+  level: DEBUG
+  # baud_rate: 0
+
+time:
+  - platform: homeassistant
+    id: !extend esp_time
+    on_time:
+      - cron: "0 0 0 * * *"
+        then:
+          - script.execute:
+              id: fire_refresh_event
+              name: "date"
+
+sensor:
+  - platform: homeassistant
+    id: outdoor_aqi
+    entity_id: sensor.weather_display_aqi
+    on_raw_value:
+      - globals.set:
+          id: need_to_update
+          value: "true"
+
+  - platform: homeassistant
+    id: outdoor_temp
+    name: outdoor temperature
+    entity_id: sensor.0x00158d000119f583_temperature
+    on_raw_value:
+      - globals.set:
+          id: need_to_update
+          value: "true"
+
+  - platform: homeassistant
+    id: indoor_temp
+    name: indoor temperature
+    entity_id: sensor.qiang_shang_wen_shi_du_gan_ying_qi_temperature
+    filters:
+      - delta: 1
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "indoor_temperature"
+    on_raw_value:
+      - globals.set:
+          id: need_to_update
+          value: "true"
+
+  - platform: homeassistant
+    id: air_conditioner_target_temp
+    entity_id: sensor.air_conditioner_target_temperature
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "air_conditioner_target_temp"
+
+  - platform: homeassistant
+    id: indoor_pm25
+    entity_id: sensor.pm25_sensor_pm2_5
+    filters:
+      - delta: 20
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "pm25"
+    on_raw_value:
+      - globals.set:
+          id: need_to_update
+          value: "true"
+
+  - platform: homeassistant
+    id: bathroom_pm25
+    entity_id: sensor.daikin_air_sensor_pm2_5
+    filters:
+      - delta: 20
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "pm25"
+    on_raw_value:
+      - globals.set:
+          id: need_to_update
+          value: "true"
+
+  - platform: homeassistant
+    id: indoor_co2
+    entity_id: sensor.cgllc_cgdn1_ee99_co2_density
+
+  - platform: homeassistant
+    id: forecast_precipitation_probability
+    entity_id: sensor.weather_display_forecast_probability_of_precipitation
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "weather"
+
+  - platform: homeassistant
+    id: forecast_minimum_temperature
+    entity_id: sensor.weather_display_forecast_minimum_temperature
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "weather"
+
+  - platform: homeassistant
+    id: forecast_maximum_temperature
+    entity_id: sensor.weather_display_forecast_maximum_temperature
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "weather"
+
+  - platform: homeassistant
+    id: fan1_speed
+    entity_id: fan.air_circulation_fan_fan
+    attribute: percentage
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "fan1_speed_change"
+
+  - platform: homeassistant
+    id: fan2_speed
+    entity_id: fan.dmaker_p5_61b7_fan
+    attribute: percentage
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "fan2_speed_change"
+
+  - platform: homeassistant
+    id: fan3_speed
+    entity_id: fan.dmaker_p28_259e_fan
+    attribute: percentage
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "fan3_speed_change"
+
+binary_sensor:
+  - platform: homeassistant
+    id: outdoor_submersion
+    entity_id: binary_sensor.outdoor_raining
+    on_state:
+      - script.execute:
+          id: fire_refresh_event
+          name: "water_leak"
+
+  - platform: homeassistant
+    entity_id: light.da_deng
+    id: bedroom_lights
+    on_state:
+      if:
+        condition:
+          binary_sensor.is_on: bedroom_lights
+        then:
+          - script.execute:
+              id: fire_refresh_event
+              name: "light_on"
+
+  - platform: homeassistant
+    entity_id: binary_sensor.68abbc1b5369_light
+    id: outdoor_daylight
+    on_state:
+      - globals.set:
+          id: need_to_update
+          value: "true"
+
+  - platform: homeassistant
+    entity_id: fan.zhimi_mb5_7d47_air_purifier
+    id: air_purifier
+    on_state:
+      - script.execute:
+          id: fire_refresh_event
+          name: "air_purifier"
+
+  - platform: homeassistant
+    entity_id: binary_sensor.water_heater
+    id: water_heater
+    on_state:
+      - script.execute:
+          id: fire_refresh_event
+          name: "water_heater"
+
+  - platform: homeassistant
+    entity_id: fan.air_circulation_fan_fan
+    id: fan1_state
+    on_state:
+      - script.execute:
+          id: fire_refresh_event
+          name: "fan1"
+
+  - platform: homeassistant
+    entity_id: fan.dmaker_p5_61b7_fan
+    id: fan2_state
+    on_state:
+      - script.execute:
+          id: fire_refresh_event
+          name: "fan2"
+
+  - platform: homeassistant
+    entity_id: fan.dmaker_p28_259e_fan
+    id: fan3_state
+    on_state:
+      - script.execute:
+          id: fire_refresh_event
+          name: "fan3"
+
+text_sensor:
+  - platform: homeassistant
+    entity_id: sensor.weather_display_forecast_weather_icon
+    id: forecast_weather
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "weather"
+
+  - platform: homeassistant
+    entity_id: sensor.weather_display_forecast_weather
+    id: forecast_short_desc
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "weather"
+
+  - platform: homeassistant
+    entity_id: climate.air_conditioner_climate
+    id: air_conditioner_climate
+    on_value:
+      - script.execute:
+          id: fire_refresh_event
+          name: "air_conditioner"
+
+interval:
+  - interval: 5s
+    then:
+      - lambda: |-
+          if(id(events_are_fired) > 0 && id(display_update_count) <= 1){
+            id(fire_refresh_event).execute("sensor_update");
+            return;
+          }
+
+script:
+  - id: fire_refresh_event
+    parameters:
+      name: string
+    mode: single
+    then:
+      - lambda: |-
+          ESP_LOGW("main", "Event %s(%d) fired", name.c_str(), ++id(events_are_fired));
+          if(id(events_are_fired) > 1 && id(bedroom_lights).has_state() && id(bedroom_lights).state){
+            id(refresh_and_wait)->execute(name);
+          }
+      - delay: 1s
+
+font:
+  - file: "gfonts://Material+Symbols+Outlined"
+    id: icon_font_15
+    size: 15
+    glyphs:
+      - "\U0000e51c" # Dark Mode
+
+  - file: "gfonts://Material+Symbols+Outlined"
+    id: icon_font_20
+    size: 20
+    glyphs:
+      - "\U0000e97e" # Air_Purifier
+      - "\U0000e284" # Water Heater
+      - "\U0000f16b" # mode heat/cool
+      - "\U0000f16a" # mode heat
+      - "\U0000f166" # mode cool
+
+  - file: "resources/fonts/materialdesignicons.ttf"
+    id: icon_mdifont_20
+    size: 20
+    glyphs:
+      - "\U000F001B" # mdi-air-conditioner
+      - "\U000F0210" # Fan
+      - "\U000F1472" # Speed 1
+      - "\U000F1473" # Speed 2
+      - "\U000F1474" # Speed 3
+      - "\U000F0D43" # air-filter
+
+  - file: "gfonts://Material+Symbols+Outlined"
+    id: icon_font_24
+    size: 24
+    glyphs:
+      - "\U0000f55b" # Aq Indoor
+      - "\U0000e7b0" # CO2
+      - "\U0000e686" # Experiment
+      - "\U0000e846" # Thermometer
+      - "\U0000f176" # Rainy
+      - "\U0000f55a" # AQI
+
+  - file: "resources/fonts/materialdesignicons.ttf"
+    id: icon_weather_50
+    size: 50
+    glyphs: &icon_weather
+      - "\U000F0590" # mdi-weather-cloudy
+      - "\U000F0F2F" # mdi-weather-cloudy-alert
+      - "\U000F0E6E" # mdi-weather-cloudy-arrow-right
+      - "\U000F0593" # mdi-weather-lightning
+      - "\U000F067E" # mdi-weather-lightning-rainy
+      - "\U000F0594" # mdi-weather-night
+      - "\U000F0F31" # mdi-weather-night-partly-cloudy
+      - "\U000F0595" # mdi-weather-partly-cloudy
+      - "\U000F0F32" # mdi-weather-partly-lightning
+      - "\U000F0F33" # mdi-weather-partly-rainy
+      - "\U000F0596" # mdi-weather-pouring
+      - "\U000F0597" # mdi-weather-rainy
+      - "\U000F0599" # mdi-weather-sunny
+      - "\U000F0F37" # mdi-weather-sunny-alert
+      - "\U000F14E4" # mdi-weather-sunny-off
+      - "\U000F059A" # mdi-weather-sunset
+      - "\U000F059B" # mdi-weather-sunset-down
+      - "\U000F059C" # mdi-weather-sunset-up
+      - "\U000F059D" # mdi-weather-windy
+      - "\U000F059E" # mdi-weather-windy-variant
+
+  - file: "resources/fonts/materialdesignicons.ttf"
+    id: icon_weather_15
+    size: 15
+    glyphs:
+      - "\U000F0597" # mdi-weather-rainy
+
+  - file:
+      type: gfonts
+      family: Noto+Sans+TC
+      weight: 500
+    id: date_week_font
+    size: 20
+    glyphs: "()-,0123456789日一二三四五六"
+
+  - file:
+      type: gfonts
+      family: Noto+Sans+TC
+      weight: 200
+    id: weather_desc_font
+    size: 20
+    glyphs: "下冰午多天局後或時晨晴暫暴有短積部陣陰雨雪雲雷霧風"
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 500
+    id: font24
+    size: 24
+    glyphs: " !,.%-_:°/()0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 500
+    id: font12
+    size: 12
+    glyphs: " /0123456789"
+
+display:
+  - platform: waveshare_epaper
+    id: !extend my_display
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      if(id(display_white_screen).state){
+        return;
+      }
+
+      int width = it.get_width();
+      int height = it.get_height();
+
+      // Map weather states to MDI characters.
+      std::map<std::string, std::string> weather_icon_map
+        {
+          {"cloudy", "\U000F0590"},
+          {"cloudy-alert", "\U000F0F2F"},
+          {"fog", "\U000F0591"},
+          {"hail", "\U000F0592"},
+          {"hazy", "\U000F0F30"},
+          {"lightning", "\U000F0593"},
+          {"lightning-rainy", "\U000F067E"},
+          {"clear-night", "\U000F0594"},
+          {"night-partly-cloudy", "\U000F0F31"},
+          {"partlycloudy", "\U000F0595"},
+          {"partly-lightning", "\U000F0F32"},
+          {"partly-rainy", "\U000F0F33"},
+          {"pouring", "\U000F0596"},
+          {"rainy", "\U000F0597"},
+          {"sunny", "\U000F0599"},
+          {"sunny-alert", "\U000F0F37"},
+          {"sunny-off", "\U000F14E4"},
+          {"sunset", "\U000F059A"},
+          {"sunset-down", "\U000F059B"},
+          {"sunset-up", "\U000F059C"},
+          {"windy", "\U000F059D"},
+          {"windy-variant", "\U000F059E"},
+        };
+
+      // TOP Section
+
+      if(id(air_purifier).has_state() && id(air_purifier).state){
+        it.print(2, 3, id(icon_mdifont_20), TextAlign::TOP_LEFT, "\U000F0D43");
+      }
+
+      if(id(air_conditioner_climate).has_state() && id(air_conditioner_climate).state != "off"){
+        if(id(air_conditioner_climate).state == "cool"){
+          it.print(22, 0, id(icon_font_20), TextAlign::TOP_LEFT, "\U0000f166");
+        }else if(id(air_conditioner_climate).state == "heat"){
+          it.print(22, 0, id(icon_font_20), TextAlign::TOP_LEFT, "\U0000f16a");
+        }else if(id(air_conditioner_climate).state == "heat_cool"){
+          it.print(22, 0, id(icon_font_20), TextAlign::TOP_LEFT, "\U0000f16b");
+        }else{
+          it.print(22, 3, id(icon_mdifont_20), TextAlign::TOP_LEFT, "\U000F001B");
+        }
+      }
+
+      if(id(water_heater).has_state() && id(water_heater).state){
+        it.print(42, 0, id(icon_font_20), TextAlign::TOP_LEFT, "\U0000e284");
+      }
+
+      auto time = id(esp_time).now();
+      if (time.is_valid()) {
+        auto now_tm = time.to_c_tm();
+        const char* weekdays[] = {"日", "一", "二", "三", "四", "五", "六"};
+        const char* weekday = weekdays[now_tm.tm_wday];
+        if(weekday != NULL){
+          it.printf(148, -4, id(date_week_font), TextAlign::TOP_CENTER, "%d-%d-%d(%s)", now_tm.tm_year+1900, now_tm.tm_mon+1, now_tm.tm_mday, weekday);
+        }
+      }
+
+      if(id(fan1_state).has_state() && id(fan1_state).state){
+        if(id(fan1_speed).has_state() && !isnan(id(fan1_speed).state)){
+          if(id(fan1_speed).state == 100){
+            it.print(254, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1474");
+          }else if(id(fan1_speed).state == 66){
+            it.print(254, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1473");
+          }else if(id(fan1_speed).state == 33){
+            it.print(254, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1472");
+          }
+        }
+      }
+
+      if(id(fan2_state).has_state() && id(fan2_state).state){
+        if(id(fan2_speed).has_state() && !isnan(id(fan2_speed).state)){
+          if(id(fan2_speed).state == 100){
+            it.print(274, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1474");
+          }else if(id(fan2_speed).state >= 75 && id(fan2_speed).state < 100){
+            it.print(274, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1473");
+          }else if(id(fan2_speed).state >= 50 && id(fan2_speed).state < 75){
+            it.print(274, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1472");
+          }else{
+            it.print(274, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F0210");
+          }
+        }
+      }
+
+      if(id(fan3_state).has_state() && id(fan3_state).state){
+        if(id(fan3_speed).has_state() && !isnan(id(fan3_speed).state)){
+          if(id(fan3_speed).state == 100){
+            it.print(294, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1474");
+          }else if(id(fan3_speed).state >= 75 && id(fan3_speed).state < 100){
+            it.print(294, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1473");
+          }else if(id(fan3_speed).state >= 50 && id(fan3_speed).state < 75){
+            it.print(294, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1472");
+          }else{
+            it.print(294, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F0210");
+          }
+        }
+      }
+
+      int alarm_underline_width = 80;
+
+      // Middle Section - Column 1 (Indoor info)
+
+      if(id(indoor_temp).has_state() && !isnan(id(indoor_temp).state)){
+        it.print(0, 25, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e846");
+        if(id(air_conditioner_target_temp).has_state() && !isnan(id(air_conditioner_target_temp).state)){
+          it.printf(30, 25, id(font24), TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_temp).raw_state, id(air_conditioner_target_temp).raw_state);
+        }else{
+          it.printf(30, 25, id(font24), TextAlign::TOP_LEFT, "%.1f", id(indoor_temp).raw_state);
+        }
+
+        if(id(indoor_temp).state > $alarm_threshold_indoor_temp){
+          it.line(0, 50, alarm_underline_width, 50);
+        }
+      }
+
+      if(id(indoor_co2).has_state() && !isnan(id(indoor_co2).state)){
+        it.print(0, 50, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e7b0");
+        it.printf(30, 50, id(font24), TextAlign::TOP_LEFT, "%.0f", id(indoor_co2).raw_state);
+
+        if(id(indoor_co2).state > $alarm_threshold_indoor_co2){
+          it.line(0, 75, alarm_underline_width, 75);
+        }
+      }
+
+      if(id(indoor_pm25).has_state() && !isnan(id(indoor_pm25).state)){
+        it.print(0, 75, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000f55b");
+        if(id(bathroom_pm25).has_state() && !isnan(id(bathroom_pm25).state)){
+          it.printf(30, 75, id(font24), TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_pm25).raw_state, id(bathroom_pm25).raw_state);
+        }else{
+          it.printf(30, 75, id(font24), TextAlign::TOP_LEFT, "%.0f", id(indoor_pm25).raw_state);
+        }
+
+        if(id(indoor_pm25).state > $alarm_threshold_indoor_pm25){
+          it.line(0, 100, alarm_underline_width, 100);
+        }
+      }
+
+      // Middle Section - Column 2 (Outdoor info)
+
+      if(id(outdoor_temp).has_state() && !isnan(id(outdoor_temp).state)){
+        it.print(118, 25, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e846");
+        it.printf(148, 25, id(font24), TextAlign::TOP_LEFT, "%.1f", id(outdoor_temp).raw_state);
+
+        if(id(outdoor_temp).state > $alarm_threshold_outdoor_high_temp || id(outdoor_temp).state <= $alarm_threshold_outdoor_low_temp){
+          it.line(118, 50, 118+alarm_underline_width, 50);
+        }
+      }
+
+      if(id(forecast_precipitation_probability).has_state() && !isnan(id(forecast_precipitation_probability).state)){
+        it.print(118, 50, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000f176");
+        it.printf(148, 50, id(font24), TextAlign::TOP_LEFT, "%.0f", id(forecast_precipitation_probability).state);
+
+        if(id(forecast_precipitation_probability).state > $alarm_threshold_outdoor_pop){
+           it.line(118, 75, 118+alarm_underline_width, 75);
+        }
+      }
+
+      if(id(outdoor_aqi).has_state() && !isnan(id(outdoor_aqi).state)){
+        it.print(118, 75, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000f55a");
+        it.printf(148, 75, id(font24), TextAlign::TOP_LEFT, "%.0f", id(outdoor_aqi).state);
+
+        if(id(outdoor_aqi).state > $alarm_threshold_outdoor_aqi){
+          it.line(118, 100, 118+alarm_underline_width, 100);
+        }
+      }
+
+      // Middle Section - Column 3 (Weather Info)
+
+      if(id(outdoor_submersion).has_state() && id(outdoor_submersion).state){
+        it.print(227, 25, id(icon_weather_15), TextAlign::TOP_LEFT, weather_icon_map["rainy"].c_str());
+      }
+
+      bool nightMode = false;
+      if(id(outdoor_daylight).has_state() && !id(outdoor_daylight).state){
+        nightMode = true;
+      }
+
+      if(id(forecast_weather).has_state() && id(forecast_weather).state != ""){
+        const char* weather_condition = id(forecast_weather).state.c_str();
+        if(nightMode){
+          if (id(forecast_weather).state == "sunny"){
+            weather_condition = "clear-night";
+          }else if(id(forecast_weather).state == "partlycloudy"){
+            weather_condition = "night-partly-cloudy";
+          }else{
+            it.print(295, 25, id(icon_font_15), TextAlign::TOP_RIGHT, "\U0000e51c");
+          }
+        }
+
+        it.print(261, 50, id(icon_weather_50), TextAlign::CENTER, weather_icon_map[weather_condition].c_str());
+      }
+
+      if(id(forecast_minimum_temperature).has_state() && !isnan(id(forecast_minimum_temperature).state)
+         && id(forecast_maximum_temperature).has_state() && !isnan(id(forecast_maximum_temperature).state)){
+        it.printf(261, 75, id(font24), TextAlign::TOP_CENTER, "%.0f-%.0f", id(forecast_minimum_temperature).state, id(forecast_maximum_temperature).state);
+      }
+
+      // Bottom Section
+      if(id(forecast_short_desc).has_state() && id(forecast_short_desc).state != "" && id(forecast_short_desc).state != "unavailable"){
+        it.printf(148, 112,  id(weather_desc_font), TextAlign::CENTER, "%s", id(forecast_short_desc).state.c_str());
+      }
+
+      it.printf(294, 124, id(font12), TextAlign::BOTTOM_RIGHT, "%d / %d", id(display_full_update_count), id(display_update_count));

@@ -1,0 +1,16 @@
+button:
+  - platform: template
+    id: display_full_refersh
+    name: "Full Refresh"
+    on_press:
+      - lambda: |-
+          id(my_display).full_refresh();
+
+  - platform: template
+    id: display_store_mode
+    name: "Store Mode"
+    entity_category: "config"
+    on_press:
+      - lambda: |-
+          id(display_white_screen).publish_state(true);
+          id(my_display).full_refresh();

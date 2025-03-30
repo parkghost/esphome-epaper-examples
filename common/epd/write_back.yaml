@@ -1,0 +1,32 @@
+substitutions:
+  sensor_values_update_interval: "1800" # 可覆蓋變數
+
+globals:
+  - id: events_are_fired
+    type: int
+    initial_value: "0"
+
+  - id: need_to_update
+    type: bool
+    initial_value: "false"
+
+  - id: sensor_updated_timestamp
+    type: int
+    initial_value: "0"
+
+interval:
+  - interval: 10s
+    then:
+      - lambda: |-
+          auto time = id(esp_time).now();
+          if(id(need_to_update) && ((time.timestamp - id(sensor_updated_timestamp)) > $sensor_values_update_interval)){
+            id(fire_refresh_event).execute("sensor_update");
+            return;
+          }
+
+script:
+  - id: !extend refresh_display
+    then:
+      - lambda: |-
+          id(need_to_update) = false;
+          id(sensor_updated_timestamp) = id(esp_time).now().timestamp;

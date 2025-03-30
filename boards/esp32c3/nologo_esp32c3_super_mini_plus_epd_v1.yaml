@@ -1,0 +1,14 @@
+packages:
+  mainboard: !include nologo_esp32c3_super_mini_plus.yaml
+
+spi:
+  clk_pin: GPIO6
+  mosi_pin: GPIO7
+
+display:
+  - platform: waveshare_epaper
+    id: my_display
+    reset_pin: GPIO4
+    dc_pin: GPIO3
+    cs_pin: GPIO10
+    busy_pin: GPIO20

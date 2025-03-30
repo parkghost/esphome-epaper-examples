@@ -1,0 +1,68 @@
+substitutions:
+  refresh_display_delay: "3s" # 可覆蓋變數
+
+switch:
+  - platform: template
+    name: "White Screen"
+    id: display_white_screen
+    optimistic: true
+    entity_category: "config"
+    on_turn_on:
+      - script.wait: refresh_display
+      - script.execute:
+          id: refresh_display
+          name: "white_screen_on"
+
+    on_turn_off:
+      - script.wait: refresh_display
+      - script.execute:
+          id: refresh_display
+          name: "white_screen_off"
+
+button:
+  - platform: template
+    id: display_refersh
+    name: "Refresh"
+    on_press:
+      - script.wait: refresh_display
+      - script.execute:
+          id: refresh_display
+          name: "refresh_button"
+
+text_sensor:
+  - platform: template
+    id: update_reason
+    name: "Display Update Reason"
+    entity_category: "diagnostic"
+    disabled_by_default: true
+
+script:
+  - id: refresh_display # Single execution avoids concurrent execution
+    parameters:
+      name: string
+    then:
+      - component.update: my_display
+      - lambda: |-
+          id(update_reason).publish_state(name);
+      - delay: $refresh_display_delay
+
+  - id: refresh_and_wait # Run the first and last events
+    parameters:
+      name: string
+    mode: queued
+    max_runs: 2
+    then:
+      - lambda: id(refresh_display)->execute(name);
+      - script.wait: refresh_display
+
+  # - id: fire_refresh_event # Ignore simultaneous events and add filters
+  #   parameters:
+  #     name: string
+  #   mode: single
+  #   then:
+  #     - lambda: |-
+  #         ESP_LOGW("main", "Event %s(%d) fired", name.c_str(), ++id(events_are_fired));
+  #         if(id(events_are_fired) > 1 && id(bedroom_lights).has_state() && id(bedroom_lights).state){
+  #           id(refresh_and_wait)->execute(name);
+  #         }
+  #     - delay: 1s

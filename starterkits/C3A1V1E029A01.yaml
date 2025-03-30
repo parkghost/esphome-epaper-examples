@@ -1,0 +1,43 @@
+substitutions:
+  device_name: c3a1v1e029a01
+  friendly_name: C3A1V1E029A01
+  display_model: gdeh029a1
+  display_rotation: "270"
+  display_update_interval: 30s
+  display_full_update_every: "30"
+
+external_components:
+  - source: github://parkghost/epd
+    components: [ waveshare_epaper ]
+
+packages:
+  board: !include ../boards/esp32c3/nologo_esp32c3_super_mini_plus_epd_v1.yaml
+  device_web: !include ../templates/device_standalone.yaml
+  epd_toolkit: !include ../common/epd/toolkit.yaml
+  epd_toolkit_ext: !include ../common/epd/toolkit_ext.yaml
+
+font:
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 300
+    id: time_font
+    size: 120
+    glyphs: [":0123456789"]
+
+display:
+  - platform: waveshare_epaper
+    id: !extend my_display
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      int width = it.get_width();
+      int height = it.get_height();
+      if (id(display_white_screen).state) {
+        return;
+      }
+
+      auto time = id(esp_time).now();
+      it.strftime(width/2, height/2, id(time_font), TextAlign::CENTER, "%H:%M",time);

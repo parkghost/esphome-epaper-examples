@@ -1,0 +1,29 @@
+globals:
+  - id: display_update_count
+    type: int
+    initial_value: "0"
+
+  - id: display_full_update_count
+    type: int
+    initial_value: "0"
+
+sensor:
+  - platform: template
+    id: display_full_update_count_sensor
+    name: "Display Full Update Count"
+    entity_category: "diagnostic"
+
+  - platform: template
+    id: display_update_count_sensor
+    name: "Display Update Count"
+    entity_category: "diagnostic"
+
+script:
+  - id: !extend refresh_display
+    then:
+      - lambda: |-
+          if(id(display_update_count)++ % $display_full_update_every == 0){
+            id(display_full_update_count)++;
+          }
+          id(display_update_count_sensor).publish_state(id(display_update_count));
+          id(display_full_update_count_sensor).publish_state(id(display_full_update_count));

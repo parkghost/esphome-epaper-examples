@@ -1,0 +1,47 @@
+# Chip is ESP32-C3 (QFN32) (revision v0.4)
+# Features: WiFi, BLE, Embedded Flash 4MB (XMC)
+# Crystal is 40MHz
+
+esp32:
+  board: esp32-c3-devkitm-1
+
+# sensor:
+#   - platform: internal_temperature
+#     name: "Internal Temperature"
+
+# binary_sensor:
+#   - platform: gpio
+#     pin:
+#       number: GPIO9
+#       mode:
+#         input: true
+#         pullup: true
+#       inverted: true
+#     name: "Boot Button"
+#     id: boot_btn
+#     disabled_by_default: true
+#     entity_category: "diagnostic"
+
+# light:
+#   - platform: neopixelbus
+#     type: GRB
+#     variant: WS2812
+#     pin: GPIO8
+#     num_leds: 1
+#     default_transition_length: 0s
+#     name: "Status LED"
+#     id: board_rgb_led
+#     disabled_by_default: true
+#     effects:
+#       - pulse:
+#           name: "Slow Pulse"
+#           transition_length: 250ms
+#           update_interval: 250ms
+#           min_brightness: 50%
+#           max_brightness: 100%
+#       - pulse:
+#           name: "Fast Pulse"
+#           transition_length: 100ms
+#           update_interval: 100ms
+#           min_brightness: 50%
+#           max_brightness: 100%
