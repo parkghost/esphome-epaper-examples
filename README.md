@@ -54,6 +54,13 @@
 ![digital-photo-frame.yaml](images/digital-photo-frame-4.2-3.jpg)
 ![digital-photo-frame.yaml](images/digital-photo-frame-7.5.jpg)
 
+## `notion-database-viewer`
+顯示 Notion Database 數據與動態排版，詳情請見另一專案 [esphome-notion-database
+](https://github.com/parkghost/esphome-notion-database/tree/main/examples/notion-database-viewer)
+![notion-database-viewer](images/notion-database-viewer-2.9.jpg)
+![notion-database-viewer](images/notion-database-viewer-4.2.jpg)
+![notion-database-viewer](images/notion-database-viewer-7.5.jpg)
+
 ## 參考資料
 - [ESPhome Waveshare E-Paper Display](https://esphome.io/components/display/waveshare_epaper.html)
 - [More ESPhome E-Paper Driver](https://github.com/parkghost/epd)
