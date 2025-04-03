@@ -42,7 +42,7 @@
 ![calendar.yaml](images/calendar.jpg)
 
 ## [digital-photo-frame.yaml](digital-photo-frame.yaml)
-展示經 Floyd-Steinberg 演算法處理的圖片，並透過 ESPHome 的 Online Image 下載隨機 webp 格式的隨機圖片庫，與其他影像調整功能
+展示經 Floyd-Steinberg 演算法處理的圖片，並透過 ESPHome 的 Online Image 下載隨機 webp 格式圖片，與自訂影像調整功能
 
 **注意事項：**
 - 開發板需要有 PSRAM，影像大小需做限制
@@ -60,6 +60,7 @@
 ![notion-database-viewer](images/notion-database-viewer-2.9.jpg)
 ![notion-database-viewer](images/notion-database-viewer-4.2.jpg)
 ![notion-database-viewer](images/notion-database-viewer-7.5.jpg)
+![digital-photo-frame.yaml](images/notion-database-viewer-console.png)
 
 ## 參考資料
 - [ESPhome Waveshare E-Paper Display](https://esphome.io/components/display/waveshare_epaper.html)
