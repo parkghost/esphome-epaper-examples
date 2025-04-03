@@ -49,6 +49,7 @@
 - Online Image 有支援多種影像格式，各別限制條件請[詳閱文件](https://esphome.io/components/online_image.html)
 - 此範例穩定性很差，圖片下載與影像解碼階段會頻繁崩潰
 
+Image Source: https://picsum.photos/400/300.webp
 ![digital-photo-frame.yaml](images/digital-photo-frame-4.2-1.jpg)
 ![digital-photo-frame.yaml](images/digital-photo-frame-4.2-2.jpg)
 ![digital-photo-frame.yaml](images/digital-photo-frame-4.2-3.jpg)
@@ -57,6 +58,7 @@
 ## [notion-database-viewer](https://github.com/parkghost/esphome-notion-database/tree/main/examples/notion-database-viewer)
 顯示 Notion Database 數據的通用工具
 
+Notion Template: https://www.notion.com/templates/kanban-board
 ![notion-database-viewer](images/notion-database-viewer-2.9.jpg)
 ![notion-database-viewer](images/notion-database-viewer-4.2.jpg)
 ![notion-database-viewer](images/notion-database-viewer-7.5.jpg)
