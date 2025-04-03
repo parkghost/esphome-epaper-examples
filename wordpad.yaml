@@ -9,16 +9,20 @@ substitutions:
   glyph_test: "回"
   wordpad_content_source: input_text.wordpad_display_content
 
+external_components:
+  - source: github://parkghost/esphome-epaper
+    components: [ waveshare_epaper ]
+
+logger:
+  level: DEBUG
+  # baud_rate: 0
+
 packages:
   board: !include boards/esp32c3/nologo_esp32c3_super_mini_plus_epd_v1.yaml
   device_web: !include templates/device_web.yaml
   epd_toolkit: !include common/epd/toolkit.yaml
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
   epd_metrics: !include common/epd/metrics.yaml
-
-logger:
-  level: DEBUG
-  # baud_rate: 0
 
 esphome:
   # platformio_options:
@@ -32,10 +36,6 @@ text_sensor:
       - script.execute:
           id: fire_refresh_event
           name: "content_change"
-
-external_components:
-  - source: github://parkghost/esphome-epaper
-    components: [ waveshare_epaper ]
 
 # text:
 #   - platform: template

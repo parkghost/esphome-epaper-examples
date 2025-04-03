@@ -13,14 +13,6 @@ substitutions:
   alarm_threshold_outdoor_pop: "30"
   alarm_threshold_outdoor_aqi: "50"
 
-packages:
-  board: !include boards/esp32c3/nologo_esp32c3_super_mini_plus_epd_v1.yaml
-  device_web: !include templates/device_web.yaml
-  epd_toolkit: !include common/epd/toolkit.yaml
-  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
-  epd_metrics: !include common/epd/metrics.yaml
-  epd_writeback: !include common/epd/writeback.yaml
-
 external_components:
   - source: github://parkghost/esphome-epaper
     components: [ waveshare_epaper ]
@@ -28,6 +20,14 @@ external_components:
 logger:
   level: DEBUG
   # baud_rate: 0
+
+packages:
+  board: !include boards/esp32c3/nologo_esp32c3_super_mini_plus_epd_v1.yaml
+  device_web: !include templates/device_web.yaml
+  epd_toolkit: !include common/epd/toolkit.yaml
+  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+  epd_metrics: !include common/epd/metrics.yaml
+  epd_writeback: !include common/epd/writeback.yaml
 
 time:
   - platform: homeassistant
