@@ -2,7 +2,7 @@
 
 此專案包含多種 ESPHome 配置範例，適用於不同的電子紙顯示器。以下為各範例的說明
 
-## `dashboard.yaml`
+## [dashboard.yaml](dashboard.yaml)
 顯示 Home Assistant 設備狀態、感測器數值、天氣資訊、異常警示，分級事件的刷新控制，25 類事件，每天刷新次數約 80 次，含全刷新(閃爍) 2-3 次
 
 **注意事項：**
@@ -10,7 +10,7 @@
 
 ![dashboard.yaml](images/dashboard.jpg)
 
-## `clock.yaml`
+## [clock.yaml](clock.yaml)
 顯示日期與即時時間，每六小時連網校正時間。在深度睡眠模式下一顆 18650 電池供電，約可運行 20 天，28800 次刷新
 
 **注意事項：**
@@ -36,12 +36,12 @@
 
 ![wordpad.yaml](images/wordpad.jpg)
 
-## `calendar.yaml`
+## [calendar.yaml](calendar.yaml)
 顯示當月日曆與今日日期
 
 ![calendar.yaml](images/calendar.jpg)
 
-## `digital-photo-frame.yaml`
+## [digital-photo-frame.yaml](digital-photo-frame.yaml)
 展示經 Floyd-Steinberg 演算法處理的圖片，並透過 ESPHome 的 Online Image 下載隨機 webp 格式的隨機圖片庫，與其他影像調整功能
 
 **注意事項：**
@@ -54,9 +54,9 @@
 ![digital-photo-frame.yaml](images/digital-photo-frame-4.2-3.jpg)
 ![digital-photo-frame.yaml](images/digital-photo-frame-7.5.jpg)
 
-## `notion-database-viewer`
-顯示 Notion Database 數據與動態排版，詳情請見另一專案 [esphome-notion-database
-](https://github.com/parkghost/esphome-notion-database/tree/main/examples/notion-database-viewer)
+## [notion-database-viewer](https://github.com/parkghost/esphome-notion-database/tree/main/examples/notion-database-viewer)
+顯示 Notion Database 數據的通用工具
+
 ![notion-database-viewer](images/notion-database-viewer-2.9.jpg)
 ![notion-database-viewer](images/notion-database-viewer-4.2.jpg)
 ![notion-database-viewer](images/notion-database-viewer-7.5.jpg)
