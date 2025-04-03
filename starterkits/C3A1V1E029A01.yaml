@@ -7,7 +7,7 @@ substitutions:
   display_full_update_every: "30"
 
 external_components:
-  - source: github://parkghost/epd
+  - source: github://parkghost/esphome-epaper
     components: [ waveshare_epaper ]
 
 packages:

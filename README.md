@@ -63,7 +63,7 @@
 
 ## 參考資料
 - [ESPhome Waveshare E-Paper Display](https://esphome.io/components/display/waveshare_epaper.html)
-- [More ESPhome E-Paper Driver](https://github.com/parkghost/epd)
+- [More ESPhome E-Paper Driver](https://github.com/parkghost/esphome-epaper)
 - [ESPhome Display Components](https://esphome.io/components/#display-components)
 - [ESPhome Home Assistant Sensor](https://esphome.io/components/sensor/homeassistant)
 - [ESPhome Home Deep Sleep](https://esphome.io/components/deep_sleep.html)

@@ -34,7 +34,7 @@ text_sensor:
           name: "content_change"
 
 external_components:
-  - source: github://parkghost/epd
+  - source: github://parkghost/esphome-epaper
     components: [ waveshare_epaper ]
 
 # text:

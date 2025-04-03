@@ -10,7 +10,7 @@ substitutions:
   wait_for_time_sync: "false"
 
 external_components:
-  - source: github://parkghost/epd
+  - source: github://parkghost/esphome-epaper
     components: [ waveshare_epaper ]
 
 esphome:

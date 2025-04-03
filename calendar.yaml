@@ -15,7 +15,7 @@ packages:
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
 
 external_components:
-  - source: github://parkghost/epd
+  - source: github://parkghost/esphome-epaper
     components: [ waveshare_epaper ]
 
 logger:

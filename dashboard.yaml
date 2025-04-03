@@ -22,7 +22,7 @@ packages:
   epd_writeback: !include common/epd/writeback.yaml
 
 external_components:
-  - source: github://parkghost/epd
+  - source: github://parkghost/esphome-epaper
     components: [ waveshare_epaper ]
 
 logger:
