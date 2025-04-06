@@ -1,0 +1,14 @@
+packages:
+  mainboard: !include nologo_esp32_s3_devkitc_1.yaml
+
+spi:
+  clk_pin: GPIO12
+  mosi_pin: GPIO11
+
+display:
+  - platform: waveshare_epaper
+    id: my_display
+    reset_pin: GPIO13
+    dc_pin: GPIO14
+    cs_pin: GPIO10
+    busy_pin: GPIO9

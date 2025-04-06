@@ -1,0 +1,14 @@
+packages:
+  mainboard: !include seeed_xiao_esp32s3.yaml
+
+spi:
+  clk_pin: GPIO9
+  mosi_pin: GPIO8
+
+display:
+  - platform: waveshare_epaper
+    id: my_display
+    reset_pin: GPIO7
+    dc_pin:  GPIO44
+    cs_pin: GPIO4
+    busy_pin: GPIO5

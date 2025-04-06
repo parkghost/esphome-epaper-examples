@@ -1,0 +1,66 @@
+# Chip is ESP32-S3 (QFN56) (revision v0.2)
+# Features: WiFi, BLE, Embedded PSRAM 8MB (AP_3v3)
+# Crystal is 40MHz
+# Detected flash size: 16MB
+# Flash type set in eFuse: quad (4 data lines)
+
+esphome:
+  platformio_options:
+    board_build.arduino.memory_type: qio_opi
+    board_build.flash_mode: qio
+    build_flags:
+      - "-DCONFIG_SPIRAM_CACHE_WORKAROUND"
+      - "-mfix-esp32-psram-cache-issue"
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 16MB
+  framework:
+    type: arduino
+
+psram:
+  mode: octal
+  speed: 80MHz
+
+sensor:
+  - platform: debug
+    psram:
+      name: "Free PSRAM"
+
+# binary_sensor:
+#   - platform: gpio
+#     pin:
+#       number: GPIO0
+#       mode:
+#         input: true
+#         pullup: true
+#       inverted: true
+#     name: "Boot Button"
+#     id: boot_btn
+#     disabled_by_default: true
+#     entity_category: "diagnostic"
+
+# light:
+#   - platform: neopixelbus
+#     type: GRB
+#     variant: WS2812
+#     pin: GPIO48
+#     num_leds: 1
+#     default_transition_length: 0s
+#     name: "Status LED"
+#     id: board_rgb_led
+#     disabled_by_default: true
+#     effects:
+#       - pulse:
+#           name: "Slow Pulse"
+#           transition_length: 250ms
+#           update_interval: 250ms
+#           min_brightness: 50%
+#           max_brightness: 100%
+#       - pulse:
+#           name: "Fast Pulse"
+#           transition_length: 100ms
+#           update_interval: 100ms
+#           min_brightness: 50%
+#           max_brightness: 100%
