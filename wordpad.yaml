@@ -93,7 +93,7 @@ display:
       int screen_width = it.get_width();
       int screen_height = it.get_height();
       auto font = id(tc_font);
-      int font_width; 
+      int font_width;
       int font_height;
       int font_baseline;
       int font_x_offset;
@@ -103,7 +103,7 @@ display:
       std::string text = id(content).state;
       ESP_LOGD("display", "text:%s", text);
 
-      int y = (screen_height % line_height) / 2 + (line_height - font_height) / 2;  
+      int y = (screen_height % line_height) / 2 + (line_height - font_height) / 2;
 
       int start = 0;
       int length = text.length();
@@ -187,7 +187,7 @@ display:
         // Stop if the next line would exceed the screen height
         if(lines.size()+1 > screen_height / line_height){
           break;
-        } 
+        }
       }
 
       // Calculate the unified x position based on the maximum line width

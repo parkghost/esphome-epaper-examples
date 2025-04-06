@@ -41,7 +41,7 @@ display:
       it.fill(WHITE);
       if (id(display_white_screen).state) {
         return;
-      }      
+      }
 
       auto time = id(esp_time).now();
       it.strftime(width/2, height/2, id(time_font), RED, TextAlign::CENTER, "%H:%M",time);
