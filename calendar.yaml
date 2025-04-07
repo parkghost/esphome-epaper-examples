@@ -23,6 +23,10 @@ packages:
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
 
 globals:
+  - id: timesynced
+    type: bool
+    initial_value: "false"
+
   - id: initial
     type: bool
     initial_value: "false"
@@ -43,9 +47,16 @@ time:
 
     on_time_sync:
       - lambda: |-
+          id(timesynced) = true;
           if(!id(initial)){
+            // If the display refresh takes too long, the event may be filtered out because the fire_refresh_event script is in progress.
             id(fire_refresh_event).execute();
           }
+
+interval:
+  - interval: 30s
+    then:
+      - lambda: if(id(timesynced) && !id(initial)) id(fire_refresh_event).execute();
 
 script:
   - id: fire_refresh_event
@@ -113,6 +124,7 @@ display:
         return;
       }
       id(initial) = true;
+      id(initial_checker).stop_poller();
 
       // calculates the number of days in the current month
       uint8_t days_in_month = esphome::days_in_month(tm.month, tm.year);
