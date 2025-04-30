@@ -9,7 +9,7 @@ esp32:
   board: esp32-s3-devkitc-1
 
 psram:
-  mode: octal
+  mode: quad
   speed: 80MHz
 
 sensor:
