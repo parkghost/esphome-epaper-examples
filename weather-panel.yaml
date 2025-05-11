@@ -1,0 +1,472 @@
+substitutions:
+  device_name: weather-panel
+  friendly_name: Weather Panel
+  timezone: Asia/Taipei
+  display_model: depg0420
+  display_rotation: "0"
+  display_update_interval: never
+  display_full_update_every: "30"
+  default_forecast_city_name: 新北市
+  default_forecast_town_name: 中和區
+  highlight_color: RED
+
+external_components:
+  - source: github://parkghost/esphome-epaper
+    components: [waveshare_epaper]
+
+  - source: github://parkghost/esphome-cwa-town-forecast
+    refresh: 0s
+    components: [cwa_town_forecast]
+
+logger:
+  level: DEBUG
+  # baud_rate: 0
+
+packages:
+  board: !include boards/esp32s3/waveshare_esp32_s3_zero_epd_v2.yaml
+  device_web: !include templates/device_standalone.yaml
+  epd_toolkit: !include common/epd/toolkit.yaml
+  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+
+globals:
+  - id: initial
+    type: bool
+    initial_value: "false"
+
+  - id: day_1_icon
+    type: std::string
+    initial_value: ""
+
+  - id: day_1_min_temp
+    type: std::string
+    initial_value: ""
+
+  - id: day_1_max_temp
+    type: std::string
+    initial_value: ""
+
+  - id: day_1_date
+    type: std::string
+    initial_value: ""
+
+time:
+  - platform: sntp
+    id: !extend esp_time
+    on_time:
+      - cron: "0 /30 * * * *"
+        then:
+          - script.execute: update_forecast
+
+      # date change
+      - cron: "0 0 0 * * *"
+        then:
+          - script.execute: fire_refresh_event
+
+    on_time_sync:
+      then:
+        lambda: |-
+          if (!id(initial)) {
+            id(update_forecast)->execute();
+          }
+
+cwa_town_forecast:
+  - api_key: !secret cwa_api_key
+    city_name: !lambda return id(city_name).state;
+    town_name: !lambda return id(town_name).state;
+    mode: 7-DAYS
+    retain_fetched_data: true
+    sensor_expiry: 12h
+    id: town_forecast_7d
+    on_data_change:
+      - script.execute: fire_refresh_event
+
+select:
+  - platform: template
+    id: city_name
+    name: Forecast - City Name
+    restore_value: true
+    options:
+      - "宜蘭縣"
+      - "花蓮縣"
+      - "臺東縣"
+      - "澎湖縣"
+      - "金門縣"
+      - "連江縣"
+      - "臺北市"
+      - "新北市"
+      - "桃園市"
+      - "臺中市"
+      - "臺南市"
+      - "高雄市"
+      - "基隆市"
+      - "新竹縣"
+      - "新竹市"
+      - "苗栗縣"
+      - "彰化縣"
+      - "南投縣"
+      - "雲林縣"
+      - "嘉義縣"
+      - "嘉義市"
+      - "屏東縣"
+    initial_option: $default_forecast_city_name
+    optimistic: true
+    entity_category: "config"
+
+text:
+  - platform: template
+    id: town_name
+    name: Forecast - Town Name
+    optimistic: true
+    min_length: 0
+    max_length: 20
+    mode: text
+    restore_value: true
+    initial_value: $default_forecast_town_name
+    entity_category: "config"
+
+sensor:
+  - platform: cwa_town_forecast
+    mode: 7-DAYS
+    temperature:
+      name: "Avg Temperature"
+    max_temperature:
+      name: "Max Temperature"
+    min_temperature:
+      name: "Min Temperature"
+    dew_point:
+      name: "Avg Dew Point"
+    relative_humidity:
+      name: "Avg Relative Humidity"
+    max_apparent_temperature:
+      name: "Max Apparent Temperature"
+    min_apparent_temperature:
+      name: "Min Apparent Temperature"
+    wind_speed:
+      name: "Wind Speed"
+    probability_of_precipitation:
+      name: "Probability Of Precipitation (12H)"
+    uv_index:
+      name: "UV Index"
+
+text_sensor:
+  - platform: cwa_town_forecast
+    mode: 7-DAYS
+    max_comfort_index:
+      name: "Max Comfort Index"
+    min_comfort_index:
+      name: "Min Comfort Index"
+    max_comfort_index_description:
+      name: "Max Comfort Index Description"
+    min_comfort_index_description:
+      name: "Min Comfort Index Description"
+    wind_direction:
+      name: "Wind Direction"
+    beaufort_scale:
+      name: "Beaufort Scale"
+    weather:
+      name: "Weather"
+    weather_code:
+      name: "Weather Code"
+    weather_icon:
+      name: "Weather Icon"
+    uv_exposure_level:
+      name: "UV Exposure Level"
+    weather_description:
+      name: "Weather Description"
+    city:
+      name: "City"
+    town:
+      name: "Town"
+    last_updated:
+      name: "Last Updated"
+    last_success:
+      name: "Last Success"
+    last_error:
+      name: "Last Error"
+
+script:
+  - id: update_forecast
+    then:
+      if:
+        condition:
+          - time.has_time:
+          - wifi.connected:
+        then:
+          - component.update: town_forecast_7d
+
+  - id: fire_refresh_event
+    then:
+      - lambda: |-
+          ESP_LOGW("main", "Event fired");
+          id(refresh_and_wait)->execute("");
+      - delay: 1s
+
+button:
+  - platform: template
+    name: "Update Town Forecast"
+    on_press:
+      - script.execute: update_forecast
+
+  - platform: template
+    name: "Clear Forecast Data"
+    entity_category: diagnostic
+    on_press:
+      - lambda: |-
+          ESP_LOGI("diagnostic", "Before clear data: free heap:%u, max block:%u", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+          id(town_forecast_7d).clear_data();
+          ESP_LOGI("diagnostic", "After clear data: free heap:%u, max block:%u", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+
+font:
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: font_18
+    bpp: 2
+    size: 18
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: font_24
+    bpp: 2
+    size: 24
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: title_font
+    size: 32
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: weather_desc_font
+    size: 22
+    bpp: 2
+    glyphs: "下冰午多天局後或時晨晴暫暴有短積部陣陰雨雪雲雷霧風良好普通對敏感族群不健康所非常危害0123456789C ()-."
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: month_font
+    size: 55
+    glyphs: "一二三四五六七八九十月"
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: date_font
+    size: 100
+    glyphs: "0123456789"
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: week_font
+    size: 30
+    bpp: 2
+    glyphs: "星期日一二三四五六"
+
+  - file: "resources/fonts/jf-openhuninn-2.1.ttf"
+    id: week_font_sm
+    size: 22
+    bpp: 2
+    glyphs: "週日一二三四五六"
+
+  - file: "resources/fonts/materialdesignicons.ttf"
+    id: icon_weather_font
+    size: 150
+    glyphs: &icon_weather_glyphs
+      - "\U000F0599"  # mdi:weather-sunny
+      - "\U000F0595"  # mdi:weather-partly-cloudy
+      - "\U000F0590"  # mdi:weather-cloudy
+      - "\U000F0596"  # mdi:weather-pouring
+      - "\U000F0F33"  # mdi:weather-partly-rainy
+      - "\U000F0597"  # mdi:weather-rainy
+      - "\U000F067E"  # mdi:weather-lightning-rainy
+      - "\U000F0F32"  # mdi:weather-partly-lightning
+      - "\U000F067F"  # mdi:weather-snowy-rainy
+      - "\U000F0591"  # mdi:weather-fog
+      - "\U000F0598"  # mdi:weather-snowy
+      - "\U000F0594"  # mdi:weather-night
+      - "\U000F0F31"  # mdi:weather-night-partly-cloudy
+
+  - file: "resources/fonts/materialdesignicons.ttf"
+    id: icon_weather_font_sm
+    size: 30
+    bpp: 2
+    glyphs: *icon_weather_glyphs
+
+  - file: "resources/fonts/materialdesignicons.ttf"
+    id: icon_font
+    size: 24
+    bpp: 2
+    glyphs:
+      - "\U000F0597" # mdi:weather-rainy
+      - "\U000F050F" # mdi:thermometer
+
+display:
+  - platform: waveshare_epaper
+    id: !extend my_display
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      using namespace cwa_town_forecast;
+      int width = it.get_width();
+      int height = it.get_height();
+      auto BLACK = Color(0, 0, 0, 0);
+      auto RED = Color(255, 0, 0, 0);
+      auto WHITE = Color(255, 255, 255, 0);
+      if (it.get_display_type() == DisplayType::DISPLAY_TYPE_BINARY) {
+        BLACK = COLOR_ON;
+        WHITE = COLOR_OFF;
+      } else if (it.get_display_type() == DisplayType::DISPLAY_TYPE_COLOR) {
+        it.fill(WHITE);
+      }
+
+      if (id(display_white_screen).state) {
+        return;
+      }
+
+      if (!id(wifi_id).is_connected()) {
+        it.print(width / 2, height / 2, id(title_font), BLACK, TextAlign::CENTER, "WiFi Connecting");
+        return;
+      }
+      id(initial) = true;
+
+      auto now = id(esp_time).now();
+      std::tm now_tm = now.to_c_tm();
+
+      auto data_7d = id(town_forecast_7d).get_data();
+
+      const std::map<std::string, std::string> ICON_NAME_TO_UNICODE_MAP = {
+        {"sunny","\U000F0599"},
+        {"partly-cloudy","\U000F0595"},
+        {"cloudy","\U000F0590"},
+        {"pouring","\U000F0596"},
+        {"partly-rainy","\U000F0F33"},
+        {"rainy","\U000F0597"},
+        {"lightning-rainy","\U000F067E"},
+        {"partly-lightning","\U000F0F32"},
+        {"snowy-rainy","\U000F067F"},
+        {"fog","\U000F0591"},
+        {"snowy","\U000F0598"},
+        {"night","\U000F0594"},
+        {"night-partly-cloudy","\U000F0F31"},
+      };
+
+      const std::map<std::string, bool> WEATHER_ICON_HIGHLIGHT {
+        {"sunny", false},
+        {"partly-cloudy", false},
+        {"cloudy", false},
+        {"pouring", true},
+        {"partly-rainy", true},
+        {"rainy", true},
+        {"lightning-rainy", true},
+        {"partly-lightning", true},
+        {"snowy-rainy", true},
+        {"fog", true},
+        {"snowy", true},
+        {"night", false},
+        {"night-partly-cloudy", false},
+      };
+
+      const char *months[] = {"一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"};
+      const char *weekdays[] = {"日", "一", "二", "三", "四", "五", "六"};
+
+      int left_offset = 0;
+      int top_offset = 0;
+      int start_x = 0;
+      int start_y = 0;
+
+      // ###### top left section ######
+      left_offset = 10;
+      top_offset = 0;
+      start_x = left_offset;
+      start_y = top_offset;
+      int block_width = 150;
+      int block_height = 200;
+      start_y += 5;
+      it.printf(start_x + block_width / 2, start_y, id(month_font), $highlight_color, TextAlign::TOP_CENTER, "%s月", months[now_tm.tm_mon]);
+      start_y += 55;
+      it.printf(start_x + block_width / 2, start_y, id(date_font), $highlight_color, TextAlign::TOP_CENTER, "%d", now_tm.tm_mday);
+      start_y += 100;
+      it.printf(start_x + block_width / 2, start_y, id(week_font), $highlight_color, TextAlign::TOP_CENTER, "星期%s", weekdays[now.day_of_week - 1]);
+
+      // ###### top right section ######
+      left_offset = 150;
+      top_offset = 0;
+      start_x = left_offset;
+      start_y = top_offset;
+      block_width = width - left_offset;
+      block_height = 200;
+      std::string icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, true, now_tm, ""); // default to empty string
+      std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
+      bool highlight = WEATHER_ICON_HIGHLIGHT.find(icon) != WEATHER_ICON_HIGHLIGHT.end() ? WEATHER_ICON_HIGHLIGHT.find(icon)->second : false;
+      std::string min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, true, now_tm);
+      std::string max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, true, now_tm);
+      std::string pop_12 = data_7d.find_value(ElementValueKey::PROBABILITY_OF_PRECIPITATION, true, now_tm);
+      std::string weather_desc = data_7d.find_value(ElementValueKey::WEATHER, true, now_tm);
+      start_y -= 5;
+      it.printf(start_x + block_width / 2, start_y, id(icon_weather_font), highlight ? $highlight_color : BLACK, TextAlign::TOP_CENTER, unicode_icon.c_str());
+      start_y += 145;
+      start_x += 18;
+      it.printf(start_x, start_y + 3, id(icon_font), BLACK, TextAlign::TOP_LEFT, "\U000F050F");
+      start_x += 25;
+      it.printf(start_x, start_y, id(font_24), BLACK, TextAlign::TOP_LEFT, "%s-%s°C", min_temp.c_str(), max_temp.c_str());
+      start_x += 110;
+      it.printf(start_x, start_y + 2, id(icon_font), BLACK, TextAlign::TOP_LEFT, "\U000F0597");
+      start_x += 30;
+      it.printf(start_x, start_y, id(font_24), BLACK, TextAlign::TOP_LEFT, "%s%%", pop_12.c_str());
+      start_x = left_offset;
+      start_y += 30;
+      it.printf(start_x + block_width / 2, start_y, id(weather_desc_font), BLACK, TextAlign::TOP_CENTER, weather_desc.c_str());
+
+      // ###### bottom section ######
+      left_offset = 0;
+      top_offset = 200;
+      int days = 7;
+      int cell_w = (width - left_offset) / days;
+      int cell_h = 100 / 3;
+
+      auto day_start = now_tm;
+      auto forecast_start = data_7d.start_time;
+      if (std::mktime(&day_start) < std::mktime(&data_7d.start_time)) {
+        day_start = data_7d.start_time;
+      }
+
+      it.line(0, top_offset, width, top_offset, BLACK);
+      for (int d = 0; d < days; ++d) {
+        // daytime
+        std::tm noon = day_start;
+        noon.tm_mday += d;
+        noon.tm_hour = 12;
+        noon.tm_min = 0;
+        noon.tm_sec = 0;
+        std::mktime(&noon);
+        auto esp_noon = tm_to_esptime(noon);
+        std::string icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, false, noon, ""); // default to empty string
+        std::string min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, false, noon);
+        std::string max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, false, noon);
+
+        // fallback if no data available
+        if (d == 0) {
+          std::string date_str = now.strftime("%Y%m%d");
+          if (icon != "") {
+            // cache the first day's data
+            id(day_1_icon) = icon;
+            id(day_1_min_temp) = min_temp;
+            id(day_1_max_temp) = max_temp;
+            id(day_1_date) = date_str;
+          } else if (icon == "" && id(day_1_icon) != "" && id(day_1_date) == date_str) {
+            // fallback to cached data if available
+            icon = id(day_1_icon);
+            min_temp = id(day_1_min_temp);
+            max_temp = id(day_1_max_temp);
+            ESP_LOGW("main", "Day 1: Fallback to cached data: icon=%s min_temp=%s max_temp=%s", icon.c_str(), min_temp.c_str(), max_temp.c_str());
+          } else {
+            // fallback to the first available data
+            icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, true, now_tm, ""); // default to empty string
+            min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, true, now_tm);
+            max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, true, now_tm);
+            ESP_LOGW("main", "Day 1: Fallback to first available data: icon=%s min_temp=%s max_temp=%s", icon.c_str(), min_temp.c_str(), max_temp.c_str());
+          }
+        }
+        std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
+        bool highlight = WEATHER_ICON_HIGHLIGHT.find(icon) != WEATHER_ICON_HIGHLIGHT.end() ? WEATHER_ICON_HIGHLIGHT.find(icon)->second : false;
+        start_x = left_offset;
+        start_y = top_offset;
+        it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(week_font_sm), BLACK, TextAlign::CENTER, "週%s", weekdays[noon.tm_wday]);
+        start_y += cell_h + 3;
+        it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(icon_weather_font_sm), highlight ? $highlight_color : BLACK, TextAlign::CENTER, unicode_icon.c_str());
+        start_y += cell_h;
+        it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(font_18), BLACK, TextAlign::CENTER, "%s|%s", min_temp.c_str(), max_temp.c_str());
+      }

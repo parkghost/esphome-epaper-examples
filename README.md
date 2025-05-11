@@ -41,6 +41,11 @@
 
 ![calendar.yaml](images/calendar.jpg)
 
+## [weather-panel.yaml](weather-panel.yaml)
+顯示今日與一週天氣資訊，數據來源為[中央氣象署 - 鄉鎮天氣預報 API](https://opendata.cwa.gov.tw/dist/opendata-swagger.html)
+
+![weather-panel.yaml](images/weather-panel.jpg)
+
 ## [digital-photo-frame.yaml](digital-photo-frame.yaml)
 展示經 Floyd-Steinberg 演算法處理的圖片，並透過 ESPHome 的 Online Image 下載隨機 webp 格式圖片，與自訂影像調整功能
 
