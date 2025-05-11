@@ -176,8 +176,8 @@ display:
       const char* weekdays[] = {"週日", "週一", "週二", "週三", "週四", "週五", "週六"};
       const char* weekday = weekdays[now_tm.tm_wday];
       if(weekday != NULL){
-        it.printf(width-10, -4, id(date_week_font), TextAlign::TOP_RIGHT, "%s", weekday);
+        it.printf(width-10, -4, id(date_week_font), TextAlign::TOP_RIGHT, weekday);
       }
 
       // Clock
-      it.strftime(width/2, height/2+10, id(time_font), TextAlign::CENTER, "%H:%M",time);
+      it.strftime(width/2, height/2+10, id(time_font), TextAlign::CENTER, "%H:%M", time);
