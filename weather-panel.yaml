@@ -15,7 +15,6 @@ external_components:
     components: [waveshare_epaper]
 
   - source: github://parkghost/esphome-cwa-town-forecast
-    refresh: 0s
     components: [cwa_town_forecast]
 
 logger:
@@ -70,20 +69,24 @@ time:
           }
 
 cwa_town_forecast:
-  - api_key: !secret cwa_api_key
+  - id: town_forecast_7d
+    api_key: !secret cwa_api_key
     city_name: !lambda return id(city_name).state;
     town_name: !lambda return id(town_name).state;
     mode: 7-DAYS
+    weather_elements:
+      - 最高溫度
+      - 最低溫度
+      - 12小時降雨機率
+      - 天氣現象
     retain_fetched_data: true
-    sensor_expiry: 12h
-    id: town_forecast_7d
     on_data_change:
       - script.execute: fire_refresh_event
 
 select:
   - platform: template
     id: city_name
-    name: Forecast - City Name
+    name: City Name
     restore_value: true
     options:
       - "宜蘭縣"
@@ -115,7 +118,7 @@ select:
 text:
   - platform: template
     id: town_name
-    name: Forecast - Town Name
+    name: Town Name
     optimistic: true
     min_length: 0
     max_length: 20
@@ -124,59 +127,9 @@ text:
     initial_value: $default_forecast_town_name
     entity_category: "config"
 
-sensor:
-  - platform: cwa_town_forecast
-    mode: 7-DAYS
-    temperature:
-      name: "Avg Temperature"
-    max_temperature:
-      name: "Max Temperature"
-    min_temperature:
-      name: "Min Temperature"
-    dew_point:
-      name: "Avg Dew Point"
-    relative_humidity:
-      name: "Avg Relative Humidity"
-    max_apparent_temperature:
-      name: "Max Apparent Temperature"
-    min_apparent_temperature:
-      name: "Min Apparent Temperature"
-    wind_speed:
-      name: "Wind Speed"
-    probability_of_precipitation:
-      name: "Probability Of Precipitation (12H)"
-    uv_index:
-      name: "UV Index"
-
 text_sensor:
   - platform: cwa_town_forecast
     mode: 7-DAYS
-    max_comfort_index:
-      name: "Max Comfort Index"
-    min_comfort_index:
-      name: "Min Comfort Index"
-    max_comfort_index_description:
-      name: "Max Comfort Index Description"
-    min_comfort_index_description:
-      name: "Min Comfort Index Description"
-    wind_direction:
-      name: "Wind Direction"
-    beaufort_scale:
-      name: "Beaufort Scale"
-    weather:
-      name: "Weather"
-    weather_code:
-      name: "Weather Code"
-    weather_icon:
-      name: "Weather Icon"
-    uv_exposure_level:
-      name: "UV Exposure Level"
-    weather_description:
-      name: "Weather Description"
-    city:
-      name: "City"
-    town:
-      name: "Town"
     last_updated:
       name: "Last Updated"
     last_success:
@@ -208,13 +161,11 @@ button:
       - script.execute: update_forecast
 
   - platform: template
-    name: "Clear Forecast Data"
+    name: "Dump Forecast Data"
     entity_category: diagnostic
     on_press:
       - lambda: |-
-          ESP_LOGI("diagnostic", "Before clear data: free heap:%u, max block:%u", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
-          id(town_forecast_7d).clear_data();
-          ESP_LOGI("diagnostic", "After clear data: free heap:%u, max block:%u", ESP.getFreeHeap(), heap_caps_get_largest_free_block(MALLOC_CAP_8BIT | MALLOC_CAP_INTERNAL));
+          id(town_forecast_7d)->get_data().dump();
 
 font:
   - file: "resources/fonts/jf-openhuninn-2.1.ttf"
@@ -261,7 +212,7 @@ font:
 
   - file: "resources/fonts/materialdesignicons.ttf"
     id: icon_weather_font
-    size: 150
+    size: 140
     glyphs: &icon_weather_glyphs
       - "\U000F0599"  # mdi:weather-sunny
       - "\U000F0595"  # mdi:weather-partly-cloudy
