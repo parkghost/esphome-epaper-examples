@@ -274,10 +274,12 @@ script:
     then:
       - lambda: |-
           ESP_LOGW("main", "Event %s(%d) fired", name.c_str(), ++id(events_are_fired));
+      - delay: 500ms # Waiting for concurrent sensors to publish state
+      - lambda: |-
           if(id(events_are_fired) > 1 && id(bedroom_lights).has_state() && id(bedroom_lights).state){
             id(refresh_and_wait)->execute(name);
           }
-      - delay: 1s
+      - delay: 500ms
 
 font:
   - file: "gfonts://Material+Symbols+Outlined"
@@ -542,7 +544,7 @@ display:
       // Middle Section - Column 3 (Weather Info)
 
       if(id(outdoor_submersion).has_state() && id(outdoor_submersion).state){
-        it.print(227, 25, id(icon_weather_15), TextAlign::TOP_LEFT, ICON_NAME_TO_UNICODE_MAP.at("weather-rainy").c_str());
+        it.print(227, 25, id(icon_weather_15), TextAlign::TOP_LEFT, ICON_NAME_TO_UNICODE_MAP.at("rainy").c_str());
       }
 
       bool nightMode = false;
