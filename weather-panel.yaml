@@ -27,6 +27,11 @@ packages:
   epd_toolkit: !include common/epd/toolkit.yaml
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
 
+esphome:
+  on_boot:
+    then:
+      - script.execute: fire_refresh_event
+
 globals:
   - id: initial
     type: bool
@@ -89,31 +94,31 @@ select:
     name: City Name
     restore_value: true
     options:
-      - "宜蘭縣"
-      - "花蓮縣"
-      - "臺東縣"
-      - "澎湖縣"
-      - "金門縣"
-      - "連江縣"
-      - "臺北市"
-      - "新北市"
-      - "桃園市"
-      - "臺中市"
-      - "臺南市"
-      - "高雄市"
-      - "基隆市"
-      - "新竹縣"
-      - "新竹市"
-      - "苗栗縣"
-      - "彰化縣"
-      - "南投縣"
-      - "雲林縣"
-      - "嘉義縣"
-      - "嘉義市"
-      - "屏東縣"
+      - 宜蘭縣
+      - 花蓮縣
+      - 臺東縣
+      - 澎湖縣
+      - 金門縣
+      - 連江縣
+      - 臺北市
+      - 新北市
+      - 桃園市
+      - 臺中市
+      - 臺南市
+      - 高雄市
+      - 基隆市
+      - 新竹縣
+      - 新竹市
+      - 苗栗縣
+      - 彰化縣
+      - 南投縣
+      - 雲林縣
+      - 嘉義縣
+      - 嘉義市
+      - 屏東縣
     initial_option: $default_forecast_city_name
     optimistic: true
-    entity_category: "config"
+    entity_category: config
 
 text:
   - platform: template
@@ -125,7 +130,7 @@ text:
     mode: text
     restore_value: true
     initial_value: $default_forecast_town_name
-    entity_category: "config"
+    entity_category: config
 
 text_sensor:
   - platform: cwa_town_forecast
@@ -148,11 +153,11 @@ script:
           - component.update: town_forecast_7d
 
   - id: fire_refresh_event
+    mode: queued
+    max_runs: 2
     then:
-      - lambda: |-
-          ESP_LOGW("main", "Event fired");
-          id(refresh_and_wait)->execute("");
-      - delay: 1s
+      - component.update: my_display
+      - delay: 3s
 
 button:
   - platform: template
@@ -271,9 +276,14 @@ display:
         it.print(width / 2, height / 2, id(title_font), BLACK, TextAlign::CENTER, "WiFi Connecting");
         return;
       }
-      id(initial) = true;
 
       auto now = id(esp_time).now();
+      if (!now.is_valid())
+      {
+        it.print(width / 2, height / 2, id(title_font), BLACK, TextAlign::CENTER, "Time Synchronization");
+        return;
+      }
+      id(initial) = true;
       std::tm now_tm = now.to_c_tm();
 
       auto data_7d = id(town_forecast_7d).get_data();

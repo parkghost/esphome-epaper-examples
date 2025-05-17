@@ -22,20 +22,15 @@ packages:
   epd_toolkit: !include common/epd/toolkit.yaml
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
 
-globals:
-  - id: timesynced
-    type: bool
-    initial_value: "false"
+esphome:
+  on_boot:
+    then:
+      - script.execute: fire_refresh_event
 
+globals:
   - id: initial
     type: bool
     initial_value: "false"
-
-esphome:
-  on_boot:
-    - priority: 200
-      then:
-        - script.execute: fire_refresh_event
 
 time:
   - platform: sntp
@@ -47,25 +42,17 @@ time:
 
     on_time_sync:
       - lambda: |-
-          id(timesynced) = true;
           if(!id(initial)){
-            // If the display refresh takes too long, the event may be filtered out because the fire_refresh_event script is in progress.
             id(fire_refresh_event).execute();
           }
 
-interval:
-  - interval: 30s
-    then:
-      - lambda: if(id(timesynced) && !id(initial)) id(fire_refresh_event).execute();
-
 script:
   - id: fire_refresh_event
-    mode: single
+    mode: queued
+    max_runs: 2
     then:
-      - lambda: |-
-          ESP_LOGW("main", "Event fired");
-          id(refresh_and_wait).execute("");
-      - delay: 1s
+      - component.update: my_display
+      - delay: 3s
 
 font:
   - file: "resources/fonts/jf-openhuninn-2.1.ttf"
@@ -124,7 +111,6 @@ display:
         return;
       }
       id(initial) = true;
-      id(initial_checker).stop_poller();
 
       // calculates the number of days in the current month
       uint8_t days_in_month = esphome::days_in_month(tm.month, tm.year);
