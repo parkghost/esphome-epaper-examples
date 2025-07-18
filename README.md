@@ -21,7 +21,7 @@
 
 ![clock.yaml](images/clock.jpg)
 
-## `wordpad.yaml`
+## [wordpad.yaml](wordpad.yaml)
 顯示 Home Assistant 自訂的 `input_text` enity state，字體大小為 20px 時，2.9吋螢幕約可顯示 84 個中文字或 156 個英數字
 
 **注意事項：**

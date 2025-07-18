@@ -47,18 +47,12 @@ sensor:
   - platform: wifi_signal
     name: "WiFi Signal"
 
-debug:
-
 text_sensor:
   - platform: version
     name: "ESPHome Version"
 
   - platform: uptime
     name: Uptime
-
-  - platform: debug
-    reset_reason:
-      name: "Reset Reason"
 
   - platform: wifi_info
     ip_address:

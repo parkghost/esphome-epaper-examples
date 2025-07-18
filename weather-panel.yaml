@@ -26,6 +26,7 @@ packages:
   device_web: !include templates/device_standalone.yaml
   epd_toolkit: !include common/epd/toolkit.yaml
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+  debug: !include common/debug_esp32.yaml
 
 esphome:
   on_boot:
@@ -379,7 +380,6 @@ display:
       int cell_h = 100 / 3;
 
       auto day_start = now_tm;
-      auto forecast_start = data_7d.start_time;
       if (std::mktime(&day_start) < std::mktime(&data_7d.start_time)) {
         day_start = data_7d.start_time;
       }
