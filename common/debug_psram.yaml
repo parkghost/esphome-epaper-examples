@@ -1,0 +1,4 @@
+sensor:
+  - platform: debug
+    psram:
+      name: "Free PSRAM"

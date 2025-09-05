@@ -47,6 +47,8 @@
 ![weather-panel.yaml](images/weather-panel.jpg)
 
 ## [digital-photo-frame.yaml](digital-photo-frame.yaml)
+> [目前的 webp 的 external component 已不能通過編譯](https://github.com/esphome/esphome/pull/8284)
+
 展示經 Floyd-Steinberg 演算法處理的圖片，並透過 ESPHome 的 Online Image 下載隨機 webp 格式圖片，與自訂影像調整功能
 
 **注意事項：**
@@ -55,19 +57,35 @@
 - 此範例穩定性很差，圖片下載與影像解碼階段會頻繁崩潰
 
 Image Source: https://picsum.photos/400/300.webp
-![digital-photo-frame.yaml](images/digital-photo-frame-4.2-1.jpg)
-![digital-photo-frame.yaml](images/digital-photo-frame-4.2-2.jpg)
-![digital-photo-frame.yaml](images/digital-photo-frame-4.2-3.jpg)
-![digital-photo-frame.yaml](images/digital-photo-frame-7.5.jpg)
+<table>
+<tr>
+<td><img src="images/digital-photo-frame-4.2-1.jpg"></td>
+<td><img src="images/digital-photo-frame-4.2-2.jpg"></td>
+</tr>
+<tr>
+<td><img src="images/digital-photo-frame-4.2-3.jpg"></td>
+<td><img src="images/digital-photo-frame-7.5.jpg"></td>
+</tr>
+</table>
 
 ## [notion-database-viewer](https://github.com/parkghost/esphome-notion-database/tree/main/examples/notion-database-viewer)
 顯示 Notion Database 數據的通用工具
 
 Notion Template: https://www.notion.com/templates/kanban-board
-![notion-database-viewer](images/notion-database-viewer-2.9.jpg)
-![notion-database-viewer](images/notion-database-viewer-4.2.jpg)
-![notion-database-viewer](images/notion-database-viewer-7.5.jpg)
-![digital-photo-frame.yaml](images/notion-database-viewer-console.png)
+<table>
+  <tr>
+    <td><img src="images/notion-database-viewer-2.9.jpg"></td>
+    <td><img src="images/notion-database-viewer-4.2.jpg"></td>
+  </tr>
+  <tr>
+    <td><img src="images/notion-database-viewer-7.5.jpg"></td>
+    <td><img src="images/kanban-board.jpg"></td>
+  </tr>
+  <tr>
+    <td><img src="images/notion-database-viewer-console.png"></td>
+    <td></td>
+  </tr>
+</table>
 
 ## 參考資料
 - [ESPhome Waveshare E-Paper Display](https://esphome.io/components/display/waveshare_epaper.html)

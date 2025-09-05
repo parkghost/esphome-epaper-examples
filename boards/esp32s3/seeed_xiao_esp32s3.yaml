@@ -23,11 +23,6 @@ psram:
   mode: octal
   speed: 80MHz
 
-sensor:
-  - platform: debug
-    psram:
-      name: "Free PSRAM"
-
 # binary_sensor:
 #   - platform: gpio
 #     pin:

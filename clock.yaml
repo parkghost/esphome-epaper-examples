@@ -1,6 +1,6 @@
 substitutions:
   device_name: clock
-  friendly_name: 時鐘
+  friendly_name: Clock
   timezone: Asia/Taipei
   display_model: gdeh029a1
   display_rotation: "270"

@@ -27,6 +27,10 @@ esphome:
     then:
       - script.execute: fire_refresh_event
 
+esp32:
+  framework:
+    type: esp-idf
+
 globals:
   - id: initial
     type: bool

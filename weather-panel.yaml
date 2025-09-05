@@ -27,11 +27,16 @@ packages:
   epd_toolkit: !include common/epd/toolkit.yaml
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
   debug: !include common/debug_esp32.yaml
+  debug_psram: !include common/debug_psram.yaml
 
 esphome:
   on_boot:
     then:
       - script.execute: fire_refresh_event
+
+esp32:
+  framework:
+    type: arduino
 
 globals:
   - id: initial

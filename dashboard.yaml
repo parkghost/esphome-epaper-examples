@@ -29,6 +29,10 @@ packages:
   epd_metrics: !include common/epd/metrics.yaml
   epd_writeback: !include common/epd/writeback.yaml
 
+esp32:
+  framework:
+    type: esp-idf
+
 time:
   - platform: homeassistant
     id: !extend esp_time

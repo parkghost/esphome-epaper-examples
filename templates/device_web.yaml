@@ -40,29 +40,24 @@ sensor:
     type: timestamp
 
   - platform: wifi_signal
-    name: "WiFi - Signal"
-
-debug:
+    name: "WiFi Signal"
+    update_interval: 60s
 
 text_sensor:
   - platform: version
     name: "ESPHome Version"
 
-  - platform: debug
-    reset_reason:
-      name: "Reset Reason"
-
   - platform: wifi_info
     ip_address:
       id: wifi_ip
-      name: WiFi - IP
+      name: WiFi IP
     ssid:
       id: wifi_ssid
-      name: WiFi - SSID
+      name: WiFi SSID
     mac_address:
-      name: WiFi - Mac Address
+      name: WiFi Mac Address
     dns_address:
-      name: WiFi - DNS Address
+      name: WiFi DNS Address
 
 button:
   - platform: restart

@@ -28,6 +28,10 @@ esphome:
   # platformio_options:
   #   board_build.partitions: C:\...\boards\partitions\partitions_4m_no_ota.csv # absolute path
 
+esp32:
+  framework:
+    type: arduino
+
 text_sensor:
   - platform: homeassistant
     entity_id: $wordpad_content_source

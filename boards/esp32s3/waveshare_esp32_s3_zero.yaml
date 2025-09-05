@@ -12,11 +12,6 @@ psram:
   mode: quad
   speed: 80MHz
 
-sensor:
-  - platform: debug
-    psram:
-      name: "Free PSRAM"
-
 # binary_sensor:
 #   - platform: gpio
 #     pin:
@@ -31,9 +26,9 @@ sensor:
 #     entity_category: "diagnostic"
 
 # light:
-#   - platform: neopixelbus
-#     type: RGB
-#     variant: WS2812
+#   - platform: esp32_rmt_led_strip
+#     rgb_order: RGB
+#     chipset: ws2812
 #     pin: GPIO21
 #     num_leds: 1
 #     default_transition_length: 0s

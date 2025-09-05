@@ -17,7 +17,7 @@ substitutions:
 
 external_components:
   - source: github://parkghost/esphome-epaper
-    components: [ waveshare_epaper ]
+    components: [waveshare_epaper]
 
   - source: github://pr#8284 # webp image format
     components: [online_image]
@@ -31,6 +31,12 @@ packages:
   device_web: !include templates/device_standalone.yaml
   epd_toolkit: !include common/epd/toolkit.yaml
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+  debug: !include common/debug_esp32.yaml
+  debug_psram: !include common/debug_psram.yaml
+
+esp32:
+  framework:
+    type: esp-idf
 
 safe_mode:
   num_attempts: 99
@@ -56,6 +62,7 @@ globals:
     initial_value: "false"
 
 wifi:
+  use_psram: true
   on_connect:
     - lambda: |-
         if (!id(initial)) {
@@ -159,13 +166,6 @@ interval:
             id(update_photo).execute();
           }
 
-  - interval: 30min
-    then:
-      - lambda: |-
-          if(initial) {
-            id(update_photo).execute();
-          }
-
 http_request:
   id: httprequest
   verify_ssl: false
@@ -242,6 +242,8 @@ display:
     update_interval: $display_update_interval
     full_update_every: $display_full_update_every
     lambda: |-
+      watchdog::WatchdogManager wdm(10000); // Avoiding task watchdog timeouts
+
       int width = it.get_width();
       int height = it.get_height();
       const auto BLACK   = Color(0,   0,   0,   0);
@@ -254,6 +256,7 @@ display:
       if (it.get_display_type() == DisplayType::DISPLAY_TYPE_COLOR) {
         it.fill(WHITE);
       }
+      App.feed_wdt();
 
       if (id(display_white_screen).state) {
         return;

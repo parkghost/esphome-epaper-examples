@@ -5,10 +5,6 @@
 esp32:
   board: esp32-c3-devkitm-1
 
-# sensor:
-#   - platform: internal_temperature
-#     name: "Internal Temperature"
-
 # binary_sensor:
 #   - platform: gpio
 #     pin:
@@ -23,9 +19,9 @@ esp32:
 #     entity_category: "diagnostic"
 
 # light:
-#   - platform: neopixelbus
-#     type: GRB
-#     variant: WS2812
+#   - platform: esp32_rmt_led_strip
+#     rgb_order: GRB
+#     chipset: ws2812
 #     pin: GPIO8
 #     num_leds: 1
 #     default_transition_length: 0s
