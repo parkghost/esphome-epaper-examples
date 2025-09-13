@@ -1,0 +1,649 @@
+substitutions:
+  device_name: puppet-viewer
+  friendly_name: Puppet Viewer
+  timezone: Asia/Taipei
+  display_model: p750057-mf1-a
+  display_rotation: "0"
+  color_palette: RED,WHITE,BLACK
+  display_update_interval: never
+  display_full_update_every: "1"
+  online_image_type: RGB
+  default_online_image_url: http://homeassistant.local:10000/lovelace/0?viewport=800x480
+
+external_components:
+  - source: github://parkghost/esphome-epaper
+    components: [waveshare_epaper]
+
+logger:
+  level: DEBUG
+  # baud_rate: 0
+
+packages:
+  board: !include boards/esp32s3/seeed_xiao_esp32s3_epd_v1.yaml
+  device_web: !include templates/device_standalone.yaml
+  epd_toolkit: !include common/epd/toolkit.yaml
+  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+  debug: !include common/debug_esp32.yaml
+  debug_psram: !include common/debug_psram.yaml
+
+esp32:
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP_TASK_WDT_TIMEOUT_S: "30"
+
+esphome:
+  includes:
+    - "include/floyd_steinberg_dither.h"
+
+web_server:
+  version: 3
+  sorting_groups:
+    - id: screen_group
+      name: "Screen"
+      sorting_weight: -20
+    - id: schedule_group
+      name: "Auto Update Schedule"
+      sorting_weight: -15
+    - id: profile_group
+      name: "Display Profile"
+      sorting_weight: -13
+    - id: image_processing_group
+      name: "Image Processing"
+      sorting_weight: -12
+    - id: puppet_config_group
+      name: "Puppet Configuration"
+      sorting_weight: -10
+
+globals:
+  - id: initial
+    type: bool
+    initial_value: "false"
+  - id: last_update_time
+    type: time_t
+    initial_value: "0"
+
+wifi:
+  use_psram: true
+  on_connect:
+    - lambda: |-
+        if (!id(initial)) {
+          id(update_screen).execute();
+        }
+
+time:
+  - platform: sntp
+    id: !extend esp_time
+    on_time:
+      - seconds: 0
+        minutes: /1
+        then:
+          lambda: |-
+            // Check if auto update is enabled
+            if (!id(auto_update_enabled).state) {
+              return;
+            }
+            
+            // Check if we're in active hours
+            auto time = id(esp_time).now();
+            if (!time.is_valid()) {
+              return;
+            }
+            
+            int current_hour = time.hour;
+            int start_hour_val = (int)id(start_hour).state;
+            int end_hour_val = (int)id(end_hour).state;
+            
+            bool in_active_hours;
+            if (start_hour_val <= end_hour_val) {
+              // Same day range (e.g., 6:00 to 23:00)
+              in_active_hours = (current_hour >= start_hour_val && current_hour <= end_hour_val);
+            } else {
+              // Cross-day range (e.g., 22:00 to 6:00 next day)
+              in_active_hours = (current_hour >= start_hour_val || current_hour <= end_hour_val);
+            }
+            
+            if (!in_active_hours) {
+              return;
+            }
+            
+            // Check if it's time to update based on interval
+            time_t now = time.timestamp;
+            int interval_minutes = (int)id(update_interval_minutes).state;
+            
+            if (id(last_update_time) == 0 || (now - id(last_update_time)) >= (interval_minutes * 60)) {
+              ESP_LOGI("main", "Triggering scheduled update");
+              id(update_screen).execute();
+              id(last_update_time) = now;
+            }
+
+# Puppet Configuration UI Components
+
+number:
+  - platform: template
+    name: "Viewport Width"
+    id: viewport_width
+    min_value: 100
+    max_value: 1920
+    step: 1
+    mode: box
+    initial_value: 800
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -8
+    on_value:
+      - component.update: puppet_url_composed
+    
+  - platform: template
+    name: "Viewport Height"
+    id: viewport_height
+    min_value: 100
+    max_value: 1080
+    step: 1
+    mode: box
+    initial_value: 480
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -7
+    on_value:
+      - component.update: puppet_url_composed
+    
+  - platform: template
+    name: "Extra Wait (ms)"
+    id: extra_wait
+    min_value: 0
+    max_value: 5000
+    step: 100
+    initial_value: 3000
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -6
+    on_value:
+      - component.update: puppet_url_composed
+    
+  - platform: template
+    name: "Zoom Level"
+    id: zoom_level
+    min_value: 0.5
+    max_value: 2.0
+    step: 0.1
+    initial_value: 1
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -5
+    on_value:
+      - component.update: puppet_url_composed
+    
+  - platform: template
+    name: "Rotate Angle"
+    id: rotate_angle
+    min_value: 0
+    max_value: 270
+    step: 90
+    initial_value: 0
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -4
+    on_value:
+      - component.update: puppet_url_composed
+
+  - platform: template
+    name: "Update Interval (minutes)"
+    id: update_interval_minutes
+    min_value: 1
+    max_value: 720
+    step: 1
+    initial_value: 30
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: schedule_group
+      sorting_weight: -3
+
+  - platform: template
+    name: "Start Hour"
+    id: start_hour
+    min_value: 0
+    max_value: 23
+    step: 1
+    initial_value: 6
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: schedule_group
+      sorting_weight: -2
+
+  - platform: template
+    name: "End Hour"
+    id: end_hour
+    min_value: 0
+    max_value: 23
+    step: 1
+    initial_value: 23
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: schedule_group
+      sorting_weight: -1
+
+select:
+  - platform: template
+    name: "Image Format"
+    id: image_format
+    options: ["png", "jpeg", "bmp"]
+    initial_option: "png"
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -3
+    on_value:
+      - component.update: puppet_url_composed
+      - lambda: |-
+          if (id(display_profile).state != "Custom") {
+            id(display_profile).publish_state("Custom");
+          }
+    
+  - platform: template
+    name: "E-ink Colors"
+    id: eink_colors
+    options: ["disabled", "2", "4", "16"]
+    initial_option: "disabled"
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -2
+    on_value:
+      - component.update: puppet_url_composed
+      - lambda: |-
+          if (id(display_profile).state != "Custom") {
+            id(display_profile).publish_state("Custom");
+          }
+
+  - platform: template
+    name: "Profile"
+    id: display_profile
+    options: ["Custom", "Black/White", "Colorful"]
+    initial_option: "Custom"
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: profile_group
+      sorting_weight: -1
+    on_value:
+      - lambda: |-
+          std::string profile = id(display_profile).state;
+          if (profile == "Black/White") {
+            id(image_format).publish_state("bmp");
+            id(eink_colors).publish_state("2");
+            id(image_processing_mode).publish_state("Color Quantizer");
+          } else if (profile == "Colorful") {
+            id(image_format).publish_state("png");
+            id(eink_colors).publish_state("disabled");
+            id(image_processing_mode).publish_state("Floyd Steinberg Dither");
+          }
+
+  - platform: template
+    name: "Image Processing"
+    id: image_processing_mode
+    options: ["Direct Output", "Floyd Steinberg Dither", "Color Quantizer"]
+    initial_option: "Floyd Steinberg Dither"
+    restore_value: true
+    optimistic: true
+    web_server:
+      sorting_group_id: image_processing_group
+      sorting_weight: -1
+    on_value:
+      - lambda: |-
+          if (id(display_profile).state != "Custom") {
+            id(display_profile).publish_state("Custom");
+          }
+
+switch:
+  - platform: template
+    name: "Dark Mode"
+    id: dark_mode
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: 0
+    on_turn_on:
+      - component.update: puppet_url_composed
+    on_turn_off:
+      - component.update: puppet_url_composed
+    
+  - platform: template
+    name: "Invert Colors"
+    id: invert_colors
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_OFF
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: 1
+    on_turn_on:
+      - component.update: puppet_url_composed
+    on_turn_off:
+      - component.update: puppet_url_composed
+
+  - platform: template
+    name: "Auto Update Enabled"
+    id: auto_update_enabled
+    optimistic: true
+    restore_mode: RESTORE_DEFAULT_ON
+    web_server:
+      sorting_group_id: schedule_group
+      sorting_weight: -5
+
+button:
+  - platform: template
+    name: "Update Screen"
+    web_server:
+      sorting_group_id: screen_group
+      sorting_weight: -1
+    on_press:
+      - script.execute: update_screen
+
+http_request:
+  id: httprequest
+  verify_ssl: false
+  timeout: 10s
+  watchdog_timeout: 30s
+
+online_image:
+  - url: $default_online_image_url  # PNG format image
+    id: my_image_png
+    format: PNG
+    type: $online_image_type
+    update_interval: never
+    on_download_finished:
+      - logger.log: "PNG Download success"
+      - text_sensor.template.publish:
+          id: online_image_last_download_result
+          state: "Success"
+      - script.execute:
+          id: fire_refresh_event
+          name: "screen_update"
+    on_error:
+      - logger.log: "PNG Download failed"
+      - text_sensor.template.publish:
+          id: online_image_last_download_result
+          state: "Failed"
+
+  - url: $default_online_image_url  # JPEG format image
+    id: my_image_jpeg  
+    format: JPEG
+    type: $online_image_type
+    update_interval: never
+    on_download_finished:
+      - logger.log: "JPEG Download success"
+      - text_sensor.template.publish:
+          id: online_image_last_download_result
+          state: "Success"
+      - script.execute:
+          id: fire_refresh_event
+          name: "screen_update"
+    on_error:
+      - logger.log: "JPEG Download failed"
+      - text_sensor.template.publish:
+          id: online_image_last_download_result
+          state: "Failed"
+
+  - url: $default_online_image_url  # BMP format image
+    id: my_image_bmp
+    format: BMP
+    type: $online_image_type
+    update_interval: never
+    on_download_finished:
+      - logger.log: "BMP Download success"
+      - text_sensor.template.publish:
+          id: online_image_last_download_result
+          state: "Success"
+      - script.execute:
+          id: fire_refresh_event
+          name: "screen_update"
+    on_error:
+      - logger.log: "BMP Download failed"
+      - text_sensor.template.publish:
+          id: online_image_last_download_result
+          state: "Failed"
+
+script:
+  - id: fire_refresh_event
+    mode: single
+    parameters:
+      name: string
+    then:
+      - lambda: |-
+          ESP_LOGW("main", "Event %s fired", name.c_str());
+          id(refresh_and_wait).execute(name);
+      - delay: 1s
+
+  - id: update_screen
+    mode: single
+    then:
+      if:
+        condition: wifi.connected
+        then:
+          - text_sensor.template.publish:
+              id: online_image_last_download_result
+              state: ""
+          - lambda: |-
+              // Update the corresponding image component using composed URL and selected format
+              std::string url = id(puppet_url_composed).state;
+              std::string format = id(image_format).state;
+              ESP_LOGI("main", "Updating image with URL: %s", url.c_str());
+              ESP_LOGI("main", "Using format: %s", format.c_str());
+              
+              // Select the correct image component based on format
+              if (format == "png") {
+                id(my_image_png).release();
+                id(my_image_png).set_url(url.c_str());
+                id(my_image_png).update();
+              } else if (format == "jpeg") {
+                id(my_image_jpeg).release();
+                id(my_image_jpeg).set_url(url.c_str());
+                id(my_image_jpeg).update();
+              } else if (format == "bmp") {
+                id(my_image_bmp).release();
+                id(my_image_bmp).set_url(url.c_str());
+                id(my_image_bmp).update();
+              } else {
+                ESP_LOGE("main", "Unsupported format: %s", format.c_str());
+              }
+
+# Puppet URL Text Input Components
+text:
+  - platform: template
+    id: puppet_base_url
+    name: "Puppet Base URL"
+    optimistic: true
+    initial_value: "http://homeassistant.local:10000"
+    restore_value: true
+    mode: text
+    min_length: 0
+    max_length: 100
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -10
+    on_value:
+      - component.update: puppet_url_composed
+      
+  - platform: template
+    id: dashboard_path
+    name: "Dashboard Path"
+    optimistic: true
+    initial_value: "/lovelace/0"
+    restore_value: true
+    mode: text
+    min_length: 0
+    max_length: 100
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -9
+    on_value:
+      - component.update: puppet_url_composed
+      
+  - platform: template
+    id: language
+    name: "Language"
+    optimistic: true
+    restore_value: true
+    mode: text
+    min_length: 0
+    max_length: 10
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: -8.5
+    on_value:
+      - component.update: puppet_url_composed
+
+text_sensor:
+  - platform: template
+    id: puppet_url_composed
+    name: "Composed Puppet URL"
+    web_server:
+      sorting_group_id: puppet_config_group
+      sorting_weight: 2
+    lambda: |-
+      std::string url = id(puppet_base_url).state + id(dashboard_path).state;
+      url += "?viewport=" + to_string((int)id(viewport_width).state) + "x" + to_string((int)id(viewport_height).state);
+      url += "&wait=" + to_string((int)id(extra_wait).state);
+      url += "&zoom=" + to_string(id(zoom_level).state);
+      url += "&format=" + id(image_format).state;
+      
+      if (!id(language).state.empty()) {
+        url += "&lang=" + id(language).state;
+      }
+      
+      if (id(rotate_angle).state > 0) {
+        url += "&rotate=" + to_string((int)id(rotate_angle).state);
+      }
+      
+      if (id(dark_mode).state) {
+        url += "&dark";
+      }
+      
+      if (id(invert_colors).state) {
+        url += "&invert";
+      }
+      
+      if (id(eink_colors).state != "disabled") {
+        url += "&eink=" + id(eink_colors).state;
+      }
+      
+      return url;
+      
+  - platform: template
+    id: online_image_last_download_result
+    name: "Last Download Result"
+    web_server:
+      sorting_group_id: screen_group
+
+font:
+  - file: "gfonts://Roboto"
+    id: title_font
+    size: 32
+
+display:
+  - platform: waveshare_epaper
+    id: !extend my_display
+    model: $display_model
+    rotation: $display_rotation
+    update_interval: $display_update_interval
+    full_update_every: $display_full_update_every
+    lambda: |-
+      int width = it.get_width();
+      int height = it.get_height();
+      const auto BLACK   = Color(0,   0,   0,   0);
+      const auto RED     = Color(255, 0,   0,   0);
+      const auto GREEN   = Color(0,   255, 0,   0);
+      const auto BLUE    = Color(0,   0,   255, 0);
+      const auto YELLOW  = Color(255, 255, 0,   0);
+      const auto ORANGE  = Color(255, 127, 0,   0);
+      const auto WHITE   = Color(255, 255, 255, 0);
+      if (it.get_display_type() == DisplayType::DISPLAY_TYPE_COLOR) {
+        it.fill(WHITE);
+      }
+      App.feed_wdt();
+
+      if (id(display_white_screen).state) {
+        return;
+      }
+
+      if (!id(wifi_id).is_connected()) {
+        it.print(width / 2, height / 2, id(title_font), BLACK, TextAlign::CENTER, "WiFi Connecting");
+        return;
+      }
+      id(initial) = true;
+      
+      // Get the correct image component based on selected format
+      std::string format = id(image_format).state;
+      image::Image* current_image = nullptr;
+      
+      if (format == "png") {
+        current_image = id(my_image_png);
+      } else if (format == "jpeg") {
+        current_image = id(my_image_jpeg);
+      } else if (format == "bmp") {
+        current_image = id(my_image_bmp);
+      } else {
+        current_image = id(my_image_png); // Default to PNG
+      }
+      ESP_LOGD("main", "Image format: %s, Image dimensions: %dx%d", format.c_str(), current_image->get_width(), current_image->get_height());
+
+      std::string processing_mode = id(image_processing_mode).state;
+      ESP_LOGD("main", "Using image processing mode: %s", processing_mode.c_str());
+      if (processing_mode == "Direct Output") {
+        it.image(0, 0, current_image);
+      } else if (processing_mode == "Color Quantizer") {
+        // Color quantizer processing with custom find_closest
+        std::vector<Color> palette{$color_palette};
+        
+        auto find_closest_color = [&](const Color &pixel) -> Color {
+          int min_dist = INT_MAX;
+          Color closest = palette[0];
+          
+          for (const auto &c : palette) {
+            // Weighted color distance calculation (same as FloydSteinbergDither)
+            int dist = abs(pixel.r - c.r) * 3 + abs(pixel.g - c.g) * 5 + abs(pixel.b - c.b) * 2;
+            
+            if (dist < min_dist) {
+              min_dist = dist;
+              closest = c;
+            }
+          }
+          return closest;
+        };
+        
+        bool has_transparency = current_image->has_transparency();
+        for (int y = 0; y < current_image->get_height(); y++) {
+          for (int x = 0; x < current_image->get_width(); x++) {
+            Color pixel_color = current_image->get_pixel(x, y);
+            
+            // Skip transparent pixels if image has transparency
+            if (has_transparency && pixel_color.w == 0) {
+              continue;
+            }
+            
+            Color closest_color = find_closest_color(pixel_color);
+            it.draw_pixel_at(x, y, closest_color);
+          }
+          App.feed_wdt();  // Feed watchdog every row
+        }
+      } else {
+        // Default Floyd Steinberg Dither processing
+        FloydSteinbergDither image_processor;
+        image_processor.draw_dither_image(it, 0, 0, *current_image, std::vector<Color>{$color_palette});
+      }

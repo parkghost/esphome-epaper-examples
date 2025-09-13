@@ -37,6 +37,8 @@ packages:
 esp32:
   framework:
     type: esp-idf
+    sdkconfig_options:
+      CONFIG_ESP_TASK_WDT_TIMEOUT_S: "30"
 
 safe_mode:
   num_attempts: 99
@@ -242,8 +244,6 @@ display:
     update_interval: $display_update_interval
     full_update_every: $display_full_update_every
     lambda: |-
-      watchdog::WatchdogManager wdm(10000); // Avoiding task watchdog timeouts
-
       int width = it.get_width();
       int height = it.get_height();
       const auto BLACK   = Color(0,   0,   0,   0);
@@ -256,7 +256,6 @@ display:
       if (it.get_display_type() == DisplayType::DISPLAY_TYPE_COLOR) {
         it.fill(WHITE);
       }
-      App.feed_wdt();
 
       if (id(display_white_screen).state) {
         return;

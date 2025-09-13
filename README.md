@@ -68,6 +68,40 @@ Image Source: https://picsum.photos/400/300.webp
 </tr>
 </table>
 
+## [puppet-viewer.yaml](puppet-viewer.yaml)
+
+裝置透過 [Puppet Addon](https://github.com/balloob/home-assistant-addons/tree/main/puppet) 將指定的 Home Assistant Dashboard 轉換為螢幕截圖，並下載後繪製顯示
+
+注意事項：
+- 開發板需要有 PSRAM
+- 官方的 Puppet Addon 目前不支援中文字型，中字文會繪製方框，可以改用 [加過字型的 Puppet Addon 版本](https://github.com/parkghost/home-assistant-addons/tree/main/puppet)
+- Puppet Addon 使用瀏覽器繪製網頁，對掛載的主機硬體有較高要求
+- 字體經過 dithering 處理會變的模糊
+- 由於電子紙在解析度與顯色數量上存在限制，網頁需進行相應調整，包括資訊量控制、版面配置，以及樣式調整（區塊隱藏與對應配色等）
+
+<table>
+  <tr>
+    <td><img src="images/puppet_viewer_1.jpg"></td>
+    <td><img src="images/puppet_viewer_2.jpg"></td>
+  </tr>
+  <tr>
+    <td><img src="images/puppet_viewer_3.jpg"></td>
+    <td><img src="images/puppet_viewer_4.jpg"></td>
+  </tr>
+  <tr>
+    <td><img src="images/puppet_viewer_5.jpg"></td>
+    <td><img src="images/puppet_viewer_6.jpg"></td>
+  </tr>
+  <tr>
+    <td><img src="images/puppet_viewer_7.jpg"></td>
+    <td><img src="images/puppet_viewer_8.jpg"></td>
+  </tr>
+  <tr>
+    <td><img src="images/puppet_viewer.png"></td>
+    <td></td>
+  </tr>
+</table>
+
 ## [notion-database-viewer](https://github.com/parkghost/esphome-notion-database/tree/main/examples/notion-database-viewer)
 顯示 Notion Database 數據的通用工具
 
