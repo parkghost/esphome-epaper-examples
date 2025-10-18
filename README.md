@@ -42,9 +42,20 @@
 ![calendar.yaml](images/calendar.jpg)
 
 ## [weather-panel.yaml](weather-panel.yaml)
-顯示今日與一週天氣資訊，數據來源為[中央氣象署 - 鄉鎮天氣預報 API](https://opendata.cwa.gov.tw/dist/opendata-swagger.html)
+顯示今日天氣預報，下方區塊顯示一週或 18 小時天氣預報
 
-![weather-panel.yaml](images/weather-panel.jpg)
+<table>
+<tr>
+<td><img src="images/weather-panel.jpg"></td>
+<td><img src="images/weather-panel-18h.jpg"></td>
+</tr>
+<tr>
+<td align="center">7 Days</td>
+<td align="center">18 Hours</td>
+</tr>
+</table>
+
+
 
 ## [digital-photo-frame.yaml](digital-photo-frame.yaml)
 > [目前的 webp 的 external component 已不能通過編譯](https://github.com/esphome/esphome/pull/8284)

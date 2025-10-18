@@ -26,13 +26,9 @@ packages:
   device_web: !include templates/device_standalone.yaml
   epd_toolkit: !include common/epd/toolkit.yaml
   epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+  epd_metrics: !include common/epd/metrics.yaml
   debug: !include common/debug_esp32.yaml
   debug_psram: !include common/debug_psram.yaml
-
-esphome:
-  on_boot:
-    then:
-      - script.execute: fire_refresh_event
 
 esp32:
   framework:
@@ -63,23 +59,31 @@ time:
   - platform: sntp
     id: !extend esp_time
     on_time:
-      - cron: "0 /30 * * * *"
+      - cron: "0 0 /3 * * *"
         then:
-          - script.execute: update_forecast
-
-      # date change
-      - cron: "0 0 0 * * *"
-        then:
-          - script.execute: fire_refresh_event
+          - script.execute:
+              id: update_forecast_all
+              update_display: true
 
     on_time_sync:
       then:
         lambda: |-
           if (!id(initial)) {
-            id(update_forecast)->execute();
+            id(update_forecast_all)->execute(true);
           }
 
 cwa_town_forecast:
+  - id: town_forecast_3d
+    api_key: !secret cwa_api_key
+    city_name: !lambda return id(city_name).state;
+    town_name: !lambda return id(town_name).state;
+    mode: 3-DAYS
+    time_to: 1d
+    weather_elements:
+      - 天氣現象
+      - 3小時降雨機率
+    retain_fetched_data: true
+
   - id: town_forecast_7d
     api_key: !secret cwa_api_key
     city_name: !lambda return id(city_name).state;
@@ -91,10 +95,20 @@ cwa_town_forecast:
       - 12小時降雨機率
       - 天氣現象
     retain_fetched_data: true
-    on_data_change:
-      - script.execute: fire_refresh_event
 
 select:
+  - platform: template
+    id: forecast_mode
+    name: Forecast Mode
+    restore_value: true
+    options:
+      - "7-Day Forecast"
+      - "18-Hour Forecast"
+    initial_option: "18-Hour Forecast"
+    optimistic: true
+    on_value:
+      - script.execute: fire_refresh_event
+
   - platform: template
     id: city_name
     name: City Name
@@ -140,49 +154,66 @@ text:
 
 text_sensor:
   - platform: cwa_town_forecast
-    mode: 7-DAYS
+    mode: 3-DAYS
+    cwa_town_forecast_id: town_forecast_3d
     last_updated:
-      name: "Last Updated"
+      name: "3D Last Updated"
     last_success:
-      name: "Last Success"
+      name: "3D Last Success"
     last_error:
-      name: "Last Error"
+      name: "3D Last Error"
+
+  - platform: cwa_town_forecast
+    mode: 7-DAYS
+    cwa_town_forecast_id: town_forecast_7d
+    last_updated:
+      name: "7D Last Updated"
+    last_success:
+      name: "7D Last Success"
+    last_error:
+      name: "7D Last Error"
 
 script:
-  - id: update_forecast
+  - id: update_forecast_all
+    parameters:
+      update_display: bool
     then:
       if:
         condition:
           - time.has_time:
           - wifi.connected:
         then:
-          - component.update: town_forecast_7d
+          - lambda: |-
+              id(town_forecast_3d).update();
+              id(town_forecast_7d).update();
+              if (update_display) {
+                id(fire_refresh_event)->execute();
+              }
 
   - id: fire_refresh_event
-    mode: queued
-    max_runs: 2
     then:
-      - component.update: my_display
-      - delay: 3s
+      - lambda: |-
+          ESP_LOGW("main", "Refresh Event fired");
+          id(refresh_and_wait).execute("");
+      - delay: 200ms
 
 button:
   - platform: template
-    name: "Update Town Forecast"
+    name: "Update Town Forecast All"
     on_press:
-      - script.execute: update_forecast
-
-  - platform: template
-    name: "Dump Forecast Data"
-    entity_category: diagnostic
-    on_press:
-      - lambda: |-
-          id(town_forecast_7d)->get_data().dump();
+      - script.execute:
+          id: update_forecast_all
+          update_display: true
 
 font:
   - file: "resources/fonts/jf-openhuninn-2.1.ttf"
     id: font_18
     bpp: 2
     size: 18
+    extras:
+      - file: "resources/fonts/materialdesignicons.ttf"
+        glyphs:
+          - "\U000F0597"  # mdi:weather-rainy
 
   - file: "resources/fonts/jf-openhuninn-2.1.ttf"
     id: font_24
@@ -220,6 +251,15 @@ font:
     size: 22
     bpp: 2
     glyphs: "週日一二三四五六"
+
+  - file:
+      type: gfonts
+      family: Roboto
+      weight: 600
+    id: hour_font_sm
+    size: 20
+    bpp: 2
+    glyphs: "0123456789H"
 
   - file: "resources/fonts/materialdesignicons.ttf"
     id: icon_weather_font
@@ -284,8 +324,7 @@ display:
       }
 
       auto now = id(esp_time).now();
-      if (!now.is_valid())
-      {
+      if (!now.is_valid()) {
         it.print(width / 2, height / 2, id(title_font), BLACK, TextAlign::CENTER, "Time Synchronization");
         return;
       }
@@ -294,7 +333,7 @@ display:
 
       auto data_7d = id(town_forecast_7d).get_data();
 
-      const std::map<std::string, std::string> ICON_NAME_TO_UNICODE_MAP = {
+      const std::map<std::string, std::string> ICON_NAME_TO_UNICODE_MAP {
         {"sunny","\U000F0599"},
         {"partly-cloudy","\U000F0595"},
         {"cloudy","\U000F0590"},
@@ -380,59 +419,106 @@ display:
       // ###### bottom section ######
       left_offset = 0;
       top_offset = 200;
-      int days = 7;
-      int cell_w = (width - left_offset) / days;
-      int cell_h = 100 / 3;
-
-      auto day_start = now_tm;
-      if (std::mktime(&day_start) < std::mktime(&data_7d.start_time)) {
-        day_start = data_7d.start_time;
-      }
-
       it.line(0, top_offset, width, top_offset, BLACK);
-      for (int d = 0; d < days; ++d) {
-        // daytime
-        std::tm noon = day_start;
-        noon.tm_mday += d;
-        noon.tm_hour = 12;
-        noon.tm_min = 0;
-        noon.tm_sec = 0;
-        std::mktime(&noon);
-        auto esp_noon = tm_to_esptime(noon);
-        std::string icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, false, noon, ""); // default to empty string
-        std::string min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, false, noon);
-        std::string max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, false, noon);
 
-        // fallback if no data available
-        if (d == 0) {
-          std::string date_str = now.strftime("%Y%m%d");
-          if (icon != "") {
-            // cache the first day's data
-            id(day_1_icon) = icon;
-            id(day_1_min_temp) = min_temp;
-            id(day_1_max_temp) = max_temp;
-            id(day_1_date) = date_str;
-          } else if (icon == "" && id(day_1_icon) != "" && id(day_1_date) == date_str) {
-            // fallback to cached data if available
-            icon = id(day_1_icon);
-            min_temp = id(day_1_min_temp);
-            max_temp = id(day_1_max_temp);
-            ESP_LOGW("main", "Day 1: Fallback to cached data: icon=%s min_temp=%s max_temp=%s", icon.c_str(), min_temp.c_str(), max_temp.c_str());
-          } else {
-            // fallback to the first available data
-            icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, true, now_tm, ""); // default to empty string
-            min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, true, now_tm);
-            max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, true, now_tm);
-            ESP_LOGW("main", "Day 1: Fallback to first available data: icon=%s min_temp=%s max_temp=%s", icon.c_str(), min_temp.c_str(), max_temp.c_str());
-          }
+      std::string mode = id(forecast_mode).state;
+      if (mode == "7-Day Forecast") {
+        // 7-day forecast mode
+        int days = 7;
+        int cell_w = (width - left_offset) / days;
+        int cell_h = 100 / 3;
+
+        auto day_start = now_tm;
+        if (std::mktime(&day_start) < std::mktime(&data_7d.start_time)) {
+          day_start = data_7d.start_time;
         }
-        std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
-        bool highlight = WEATHER_ICON_HIGHLIGHT.find(icon) != WEATHER_ICON_HIGHLIGHT.end() ? WEATHER_ICON_HIGHLIGHT.find(icon)->second : false;
-        start_x = left_offset;
-        start_y = top_offset;
-        it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(week_font_sm), BLACK, TextAlign::CENTER, "週%s", weekdays[noon.tm_wday]);
-        start_y += cell_h + 3;
-        it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(icon_weather_font_sm), highlight ? $highlight_color : BLACK, TextAlign::CENTER, unicode_icon.c_str());
-        start_y += cell_h;
-        it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(font_18), BLACK, TextAlign::CENTER, "%s|%s", min_temp.c_str(), max_temp.c_str());
+
+        for (int d = 0; d < days; ++d) {
+          // daytime
+          std::tm noon = day_start;
+          noon.tm_mday += d;
+          noon.tm_hour = 12;
+          noon.tm_min = 0;
+          noon.tm_sec = 0;
+          std::mktime(&noon);
+          auto esp_noon = tm_to_esptime(noon);
+          std::string icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, false, noon, ""); // default to empty string
+          std::string min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, false, noon);
+          std::string max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, false, noon);
+
+          // fallback if no data available
+          if (d == 0) {
+            std::string date_str = now.strftime("%Y%m%d");
+            if (icon != "") {
+              // cache the first day's data
+              id(day_1_icon) = icon;
+              id(day_1_min_temp) = min_temp;
+              id(day_1_max_temp) = max_temp;
+              id(day_1_date) = date_str;
+            } else if (icon == "" && id(day_1_icon) != "" && id(day_1_date) == date_str) {
+              // fallback to cached data if available
+              icon = id(day_1_icon);
+              min_temp = id(day_1_min_temp);
+              max_temp = id(day_1_max_temp);
+              ESP_LOGW("main", "Day 1: Fallback to cached data: icon=%s min_temp=%s max_temp=%s", icon.c_str(), min_temp.c_str(), max_temp.c_str());
+            } else {
+              // fallback to the first available data
+              icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, true, now_tm, ""); // default to empty string
+              min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, true, now_tm);
+              max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, true, now_tm);
+              ESP_LOGW("main", "Day 1: Fallback to first available data: icon=%s min_temp=%s max_temp=%s", icon.c_str(), min_temp.c_str(), max_temp.c_str());
+            }
+          }
+
+          std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
+          bool highlight = WEATHER_ICON_HIGHLIGHT.find(icon) != WEATHER_ICON_HIGHLIGHT.end() ? WEATHER_ICON_HIGHLIGHT.find(icon)->second : false;
+          start_x = left_offset;
+          start_y = top_offset;
+          it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(week_font_sm), BLACK, TextAlign::CENTER, "週%s", weekdays[noon.tm_wday]);
+          start_y += cell_h + 3;
+          it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(icon_weather_font_sm), highlight ? $highlight_color : BLACK, TextAlign::CENTER, unicode_icon.c_str());
+          start_y += cell_h;
+          it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(font_18), BLACK, TextAlign::CENTER, "%s·%s", min_temp.c_str(), max_temp.c_str());
+        }
+      } else if (mode == "18-Hour Forecast") {
+        // 18-hour forecast mode
+        auto data_3d = id(town_forecast_3d).get_data();
+        int periods = 6;
+        int cell_w = (width - left_offset) / periods;
+        int cell_h = 100 / 3;
+
+        // Determine starting time - use data start time if current time is before it
+        std::tm start_time = now_tm;
+        if (std::mktime(&start_time) < std::mktime(&data_3d.start_time)) {
+          start_time = data_3d.start_time;
+          ESP_LOGD("main", "3H forecast: using data start time instead of current time");
+        }
+        // Round to nearest 3-hour boundary
+        start_time.tm_hour = (start_time.tm_hour / 3) * 3;
+        start_time.tm_min = 0;
+        start_time.tm_sec = 0;
+        std::mktime(&start_time);
+
+        for (int p = 0; p < periods; ++p) {
+          std::tm period_time = start_time;
+          period_time.tm_hour += p * 3;
+          std::mktime(&period_time);
+
+          std::string icon = data_3d.find_value(ElementValueKey::WEATHER_ICON, false, period_time, "");
+          std::string pop = data_3d.find_value(ElementValueKey::PROBABILITY_OF_PRECIPITATION, false, period_time);
+
+          std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
+          bool highlight = WEATHER_ICON_HIGHLIGHT.find(icon) != WEATHER_ICON_HIGHLIGHT.end() ? WEATHER_ICON_HIGHLIGHT.find(icon)->second : false;
+
+          start_x = left_offset;
+          start_y = top_offset;
+          // Time label
+          it.printf(start_x + (p + 0.5) * cell_w, start_y + cell_h / 2, id(hour_font_sm), BLACK, TextAlign::CENTER, "%02dH", period_time.tm_hour);
+          start_y += cell_h + 3;
+          // Weather icon
+          it.printf(start_x + (p + 0.5) * cell_w, start_y + cell_h / 2, id(icon_weather_font_sm), highlight ? $highlight_color : BLACK, TextAlign::CENTER, unicode_icon.c_str());
+          start_y += cell_h;
+          // Rain probability
+          it.printf(start_x + (p + 0.5) * cell_w, start_y + cell_h / 2, id(font_18), BLACK, TextAlign::CENTER, "\U000F0597%2s%%", pop.c_str());
+        }
       }
