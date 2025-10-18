@@ -3,7 +3,7 @@
 # Crystal is 40MHz
 
 esp32:
-  board: esp32-c3-devkitm-1
+  board: nologo_esp32c3_super_mini
 
 # binary_sensor:
 #   - platform: gpio

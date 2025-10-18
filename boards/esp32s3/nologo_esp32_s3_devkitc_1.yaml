@@ -4,20 +4,9 @@
 # Detected flash size: 16MB
 # Flash type set in eFuse: quad (4 data lines)
 
-esphome:
-  platformio_options:
-    board_build.arduino.memory_type: qio_opi
-    board_build.flash_mode: qio
-    build_flags:
-      - "-DCONFIG_SPIRAM_CACHE_WORKAROUND"
-      - "-mfix-esp32-psram-cache-issue"
-
 esp32:
-  board: esp32-s3-devkitc-1
   variant: esp32s3
   flash_size: 16MB
-  framework:
-    type: arduino
 
 psram:
   mode: octal
