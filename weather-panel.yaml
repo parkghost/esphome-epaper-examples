@@ -32,7 +32,7 @@ packages:
 
 esp32:
   framework:
-    type: arduino
+    type: esp-idf
 
 globals:
   - id: initial
@@ -72,10 +72,15 @@ time:
             id(update_forecast_all)->execute(true);
           }
 
+http_request:
+  timeout: 10s
+  watchdog_timeout: 30s
+  verify_ssl: false
+
 cwa_town_forecast:
   - id: town_forecast_3d
     api_key: !secret cwa_api_key
-    city_name: !lambda return id(city_name).state;
+    city_name: !lambda return id(city_name).current_option();
     town_name: !lambda return id(town_name).state;
     mode: 3-DAYS
     time_to: 1d
@@ -86,7 +91,7 @@ cwa_town_forecast:
 
   - id: town_forecast_7d
     api_key: !secret cwa_api_key
-    city_name: !lambda return id(city_name).state;
+    city_name: !lambda return id(city_name).current_option();
     town_name: !lambda return id(town_name).state;
     mode: 7-DAYS
     weather_elements:
@@ -331,7 +336,7 @@ display:
       id(initial) = true;
       std::tm now_tm = now.to_c_tm();
 
-      auto data_7d = id(town_forecast_7d).get_data();
+      const auto &data_7d = id(town_forecast_7d).get_data();
 
       const std::map<std::string, std::string> ICON_NAME_TO_UNICODE_MAP {
         {"sunny","\U000F0599"},
@@ -421,7 +426,7 @@ display:
       top_offset = 200;
       it.line(0, top_offset, width, top_offset, BLACK);
 
-      std::string mode = id(forecast_mode).state;
+      std::string mode = id(forecast_mode).current_option();
       if (mode == "7-Day Forecast") {
         // 7-day forecast mode
         int days = 7;
@@ -429,7 +434,8 @@ display:
         int cell_h = 100 / 3;
 
         auto day_start = now_tm;
-        if (std::mktime(&day_start) < std::mktime(&data_7d.start_time)) {
+        auto data_start_copy = data_7d.start_time;
+        if (std::mktime(&day_start) < std::mktime(&data_start_copy)) {
           day_start = data_7d.start_time;
         }
 
@@ -482,14 +488,15 @@ display:
         }
       } else if (mode == "18-Hour Forecast") {
         // 18-hour forecast mode
-        auto data_3d = id(town_forecast_3d).get_data();
+        const auto &data_3d = id(town_forecast_3d).get_data();
         int periods = 6;
         int cell_w = (width - left_offset) / periods;
         int cell_h = 100 / 3;
 
         // Determine starting time - use data start time if current time is before it
         std::tm start_time = now_tm;
-        if (std::mktime(&start_time) < std::mktime(&data_3d.start_time)) {
+        auto data_3d_start_copy = data_3d.start_time;
+        if (std::mktime(&start_time) < std::mktime(&data_3d_start_copy)) {
           start_time = data_3d.start_time;
           ESP_LOGD("main", "3H forecast: using data start time instead of current time");
         }

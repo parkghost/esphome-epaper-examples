@@ -5,8 +5,7 @@
 # Flash type set in eFuse: quad (4 data lines)
 
 esp32:
-  variant: esp32s3
-  flash_size: 4MB
+  board: waveshare_esp32_s3_zero
 
 psram:
   mode: quad

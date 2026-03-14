@@ -85,7 +85,6 @@ Image Source: https://picsum.photos/400/300.webp
 
 注意事項：
 - 開發板需要有 PSRAM
-- 官方的 Puppet Addon 目前不支援中文字型，中字文會繪製方框，可以改用 [加過字型的 Puppet Addon 版本](https://github.com/parkghost/home-assistant-addons/tree/main/puppet)
 - Puppet Addon 使用瀏覽器繪製網頁，對掛載的主機硬體有較高要求
 - 字體經過 dithering 處理會變的模糊
 - 由於電子紙在解析度與顯色數量上存在限制，網頁需進行相應調整，包括資訊量控制、版面配置，以及樣式調整（區塊隱藏與對應配色等）

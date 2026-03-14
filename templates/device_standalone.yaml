@@ -15,7 +15,7 @@ wifi:
   password: !secret wifi_password
 
   ap:
-    ssid: "${friendly_name}"
+    ssid: "$friendly_name"
     password: "12345678"
 
 web_server:

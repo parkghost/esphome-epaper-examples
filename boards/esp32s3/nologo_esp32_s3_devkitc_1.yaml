@@ -5,7 +5,7 @@
 # Flash type set in eFuse: quad (4 data lines)
 
 esp32:
-  variant: esp32s3
+  board: esp32-s3-devkitc1-n16r8
   flash_size: 16MB
 
 psram:

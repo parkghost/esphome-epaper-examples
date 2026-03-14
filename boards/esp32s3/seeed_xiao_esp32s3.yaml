@@ -5,7 +5,7 @@
 # Flash type set in eFuse: quad (4 data lines)
 
 esp32:
-  variant: esp32s3
+  board: seeed_xiao_esp32s3
   flash_size: 8MB
 
 psram:
