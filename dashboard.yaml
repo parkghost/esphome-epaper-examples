@@ -484,9 +484,9 @@ display:
       if(id(indoor_temp).has_state() && !isnan(id(indoor_temp).state)){
         it.print(0, 25, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e846");
         if(id(air_conditioner_target_temp).has_state() && !isnan(id(air_conditioner_target_temp).state)){
-          it.printf(30, 25, id(font24), TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_temp).raw_state, id(air_conditioner_target_temp).raw_state);
+          it.printf(30, 25, id(font24), TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_temp).get_raw_state(), id(air_conditioner_target_temp).get_raw_state());
         }else{
-          it.printf(30, 25, id(font24), TextAlign::TOP_LEFT, "%.1f", id(indoor_temp).raw_state);
+          it.printf(30, 25, id(font24), TextAlign::TOP_LEFT, "%.1f", id(indoor_temp).get_raw_state());
         }
 
         if(id(indoor_temp).state > $alarm_threshold_indoor_temp){
@@ -496,7 +496,7 @@ display:
 
       if(id(indoor_co2).has_state() && !isnan(id(indoor_co2).state)){
         it.print(0, 50, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e7b0");
-        it.printf(30, 50, id(font24), TextAlign::TOP_LEFT, "%.0f", id(indoor_co2).raw_state);
+        it.printf(30, 50, id(font24), TextAlign::TOP_LEFT, "%.0f", id(indoor_co2).get_raw_state());
 
         if(id(indoor_co2).state > $alarm_threshold_indoor_co2){
           it.line(0, 75, alarm_underline_width, 75);
@@ -506,9 +506,9 @@ display:
       if(id(indoor_pm25).has_state() && !isnan(id(indoor_pm25).state)){
         it.print(0, 75, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000f55b");
         if(id(bathroom_pm25).has_state() && !isnan(id(bathroom_pm25).state)){
-          it.printf(30, 75, id(font24), TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_pm25).raw_state, id(bathroom_pm25).raw_state);
+          it.printf(30, 75, id(font24), TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_pm25).get_raw_state(), id(bathroom_pm25).get_raw_state());
         }else{
-          it.printf(30, 75, id(font24), TextAlign::TOP_LEFT, "%.0f", id(indoor_pm25).raw_state);
+          it.printf(30, 75, id(font24), TextAlign::TOP_LEFT, "%.0f", id(indoor_pm25).get_raw_state());
         }
 
         if(id(indoor_pm25).state > $alarm_threshold_indoor_pm25){
@@ -520,7 +520,7 @@ display:
 
       if(id(outdoor_temp).has_state() && !isnan(id(outdoor_temp).state)){
         it.print(118, 25, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e846");
-        it.printf(148, 25, id(font24), TextAlign::TOP_LEFT, "%.1f", id(outdoor_temp).raw_state);
+        it.printf(148, 25, id(font24), TextAlign::TOP_LEFT, "%.1f", id(outdoor_temp).get_raw_state());
 
         if(id(outdoor_temp).state > $alarm_threshold_outdoor_high_temp || id(outdoor_temp).state <= $alarm_threshold_outdoor_low_temp){
           it.line(118, 50, 118+alarm_underline_width, 50);
