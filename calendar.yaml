@@ -10,7 +10,7 @@ substitutions:
 
 external_components:
   - source: github://parkghost/esphome-epaper
-    components: [ waveshare_epaper ]
+    components: [epaper_spi]
 
 logger:
   level: DEBUG
@@ -75,7 +75,7 @@ font:
     glyphs: "0123456789"
 
 display:
-  - platform: waveshare_epaper
+  - platform: epaper_spi
     id: !extend my_display
     model: $display_model
     rotation: $display_rotation
@@ -91,10 +91,7 @@ display:
       auto YELLOW  = Color(255, 255, 0,   0);
       auto ORANGE  = Color(255, 127, 0,   0);
       auto WHITE   = Color(255, 255, 255, 0);
-      if (it.get_display_type() == DisplayType::DISPLAY_TYPE_BINARY) {
-        BLACK = COLOR_ON;
-        WHITE = COLOR_OFF;
-      } else if (it.get_display_type() == DisplayType::DISPLAY_TYPE_COLOR) {
+      if (it.get_display_type() == DisplayType::DISPLAY_TYPE_COLOR) {
         it.fill(WHITE);
       }
 

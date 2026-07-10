@@ -11,7 +11,7 @@ substitutions:
 
 external_components:
   - source: github://parkghost/esphome-epaper
-    components: [ waveshare_epaper ]
+    components: [epaper_spi]
 
 logger:
   level: DEBUG
@@ -79,7 +79,7 @@ font:
       # - !include resources/glyphsets/custom.yaml
 
 display:
-  - platform: waveshare_epaper
+  - platform: epaper_spi
     id: !extend my_display
     model: $display_model
     rotation: $display_rotation
@@ -96,6 +96,7 @@ display:
 
       int screen_width = it.get_width();
       int screen_height = it.get_height();
+      auto BLACK = Color(0, 0, 0, 0);
       auto font = id(tc_font);
       int font_width;
       int font_height;
@@ -199,6 +200,6 @@ display:
 
       // Print each line starting from the first
       for (const auto &line : lines) {
-        it.print(x, y, font, TextAlign::TOP_LEFT, line.c_str());
+        it.print(x, y, font, BLACK, TextAlign::TOP_LEFT, line.c_str());
         y += line_height;
       }

@@ -17,7 +17,7 @@ substitutions:
 
 external_components:
   - source: github://parkghost/esphome-epaper
-    components: [waveshare_epaper]
+    components: [epaper_spi]
 
   - source: github://pr#8284 # webp image format
     components: [online_image]
@@ -237,7 +237,7 @@ font:
     size: 32
 
 display:
-  - platform: waveshare_epaper
+  - platform: epaper_spi
     id: !extend my_display
     model: $display_model
     rotation: $display_rotation

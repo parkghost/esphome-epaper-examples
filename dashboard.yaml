@@ -15,7 +15,7 @@ substitutions:
 
 external_components:
   - source: github://parkghost/esphome-epaper
-    components: [ waveshare_epaper ]
+    components: [epaper_spi]
 
 logger:
   level: DEBUG
@@ -375,7 +375,7 @@ font:
     glyphs: " /0123456789"
 
 display:
-  - platform: waveshare_epaper
+  - platform: epaper_spi
     id: !extend my_display
     model: $display_model
     rotation: $display_rotation
@@ -388,6 +388,7 @@ display:
 
       int width = it.get_width();
       int height = it.get_height();
+      auto BLACK = Color(0, 0, 0, 0);
 
       const std::map<std::string, std::string> ICON_NAME_TO_UNICODE_MAP = {
           {"sunny","\U000F0599"},
@@ -408,23 +409,23 @@ display:
       // TOP Section
 
       if(id(air_purifier).has_state() && id(air_purifier).state){
-        it.print(2, 3, id(icon_mdifont_20), TextAlign::TOP_LEFT, "\U000F0D43");
+        it.print(2, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_LEFT, "\U000F0D43");
       }
 
       if(id(air_conditioner_climate).has_state() && id(air_conditioner_climate).state != "off"){
         if(id(air_conditioner_climate).state == "cool"){
-          it.print(22, 0, id(icon_font_20), TextAlign::TOP_LEFT, "\U0000f166");
+          it.print(22, 0, id(icon_font_20), BLACK, TextAlign::TOP_LEFT, "\U0000f166");
         }else if(id(air_conditioner_climate).state == "heat"){
-          it.print(22, 0, id(icon_font_20), TextAlign::TOP_LEFT, "\U0000f16a");
+          it.print(22, 0, id(icon_font_20), BLACK, TextAlign::TOP_LEFT, "\U0000f16a");
         }else if(id(air_conditioner_climate).state == "heat_cool"){
-          it.print(22, 0, id(icon_font_20), TextAlign::TOP_LEFT, "\U0000f16b");
+          it.print(22, 0, id(icon_font_20), BLACK, TextAlign::TOP_LEFT, "\U0000f16b");
         }else{
-          it.print(22, 3, id(icon_mdifont_20), TextAlign::TOP_LEFT, "\U000F001B");
+          it.print(22, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_LEFT, "\U000F001B");
         }
       }
 
       if(id(water_heater).has_state() && id(water_heater).state){
-        it.print(42, 0, id(icon_font_20), TextAlign::TOP_LEFT, "\U0000e284");
+        it.print(42, 0, id(icon_font_20), BLACK, TextAlign::TOP_LEFT, "\U0000e284");
       }
 
       auto time = id(esp_time).now();
@@ -433,18 +434,18 @@ display:
         const char* weekdays[] = {"日", "一", "二", "三", "四", "五", "六"};
         const char* weekday = weekdays[now_tm.tm_wday];
         if(weekday != NULL){
-          it.printf(148, 2, id(date_week_font), TextAlign::TOP_CENTER, "%d-%d-%d(%s)", now_tm.tm_year+1900, now_tm.tm_mon+1, now_tm.tm_mday, weekday);
+          it.printf(148, 2, id(date_week_font), BLACK, TextAlign::TOP_CENTER, "%d-%d-%d(%s)", now_tm.tm_year+1900, now_tm.tm_mon+1, now_tm.tm_mday, weekday);
         }
       }
 
       if(id(fan1_state).has_state() && id(fan1_state).state){
         if(id(fan1_speed).has_state() && !isnan(id(fan1_speed).state)){
           if(id(fan1_speed).state == 100){
-            it.print(254, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1474");
+            it.print(254, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1474");
           }else if(id(fan1_speed).state == 66){
-            it.print(254, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1473");
+            it.print(254, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1473");
           }else if(id(fan1_speed).state == 33){
-            it.print(254, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1472");
+            it.print(254, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1472");
           }
         }
       }
@@ -452,13 +453,13 @@ display:
       if(id(fan2_state).has_state() && id(fan2_state).state){
         if(id(fan2_speed).has_state() && !isnan(id(fan2_speed).state)){
           if(id(fan2_speed).state == 100){
-            it.print(274, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1474");
+            it.print(274, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1474");
           }else if(id(fan2_speed).state >= 75 && id(fan2_speed).state < 100){
-            it.print(274, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1473");
+            it.print(274, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1473");
           }else if(id(fan2_speed).state >= 50 && id(fan2_speed).state < 75){
-            it.print(274, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1472");
+            it.print(274, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1472");
           }else{
-            it.print(274, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F0210");
+            it.print(274, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F0210");
           }
         }
       }
@@ -466,13 +467,13 @@ display:
       if(id(fan3_state).has_state() && id(fan3_state).state){
         if(id(fan3_speed).has_state() && !isnan(id(fan3_speed).state)){
           if(id(fan3_speed).state == 100){
-            it.print(294, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1474");
+            it.print(294, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1474");
           }else if(id(fan3_speed).state >= 75 && id(fan3_speed).state < 100){
-            it.print(294, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1473");
+            it.print(294, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1473");
           }else if(id(fan3_speed).state >= 50 && id(fan3_speed).state < 75){
-            it.print(294, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F1472");
+            it.print(294, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F1472");
           }else{
-            it.print(294, 3, id(icon_mdifont_20), TextAlign::TOP_RIGHT, "\U000F0210");
+            it.print(294, 3, id(icon_mdifont_20), BLACK, TextAlign::TOP_RIGHT, "\U000F0210");
           }
         }
       }
@@ -482,73 +483,73 @@ display:
       // Middle Section - Column 1 (Indoor info)
 
       if(id(indoor_temp).has_state() && !isnan(id(indoor_temp).state)){
-        it.print(0, 25, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e846");
+        it.print(0, 25, id(icon_font_24), BLACK, TextAlign::TOP_LEFT, "\U0000e846");
         if(id(air_conditioner_target_temp).has_state() && !isnan(id(air_conditioner_target_temp).state)){
-          it.printf(30, 25, id(font24), TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_temp).get_raw_state(), id(air_conditioner_target_temp).get_raw_state());
+          it.printf(30, 25, id(font24), BLACK, TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_temp).get_raw_state(), id(air_conditioner_target_temp).get_raw_state());
         }else{
-          it.printf(30, 25, id(font24), TextAlign::TOP_LEFT, "%.1f", id(indoor_temp).get_raw_state());
+          it.printf(30, 25, id(font24), BLACK, TextAlign::TOP_LEFT, "%.1f", id(indoor_temp).get_raw_state());
         }
 
         if(id(indoor_temp).state > $alarm_threshold_indoor_temp){
-          it.line(0, 50, alarm_underline_width, 50);
+          it.line(0, 50, alarm_underline_width, 50, BLACK);
         }
       }
 
       if(id(indoor_co2).has_state() && !isnan(id(indoor_co2).state)){
-        it.print(0, 50, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e7b0");
-        it.printf(30, 50, id(font24), TextAlign::TOP_LEFT, "%.0f", id(indoor_co2).get_raw_state());
+        it.print(0, 50, id(icon_font_24), BLACK, TextAlign::TOP_LEFT, "\U0000e7b0");
+        it.printf(30, 50, id(font24), BLACK, TextAlign::TOP_LEFT, "%.0f", id(indoor_co2).get_raw_state());
 
         if(id(indoor_co2).state > $alarm_threshold_indoor_co2){
-          it.line(0, 75, alarm_underline_width, 75);
+          it.line(0, 75, alarm_underline_width, 75, BLACK);
         }
       }
 
       if(id(indoor_pm25).has_state() && !isnan(id(indoor_pm25).state)){
-        it.print(0, 75, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000f55b");
+        it.print(0, 75, id(icon_font_24), BLACK, TextAlign::TOP_LEFT, "\U0000f55b");
         if(id(bathroom_pm25).has_state() && !isnan(id(bathroom_pm25).state)){
-          it.printf(30, 75, id(font24), TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_pm25).get_raw_state(), id(bathroom_pm25).get_raw_state());
+          it.printf(30, 75, id(font24), BLACK, TextAlign::TOP_LEFT, "%.0f / %.0f", id(indoor_pm25).get_raw_state(), id(bathroom_pm25).get_raw_state());
         }else{
-          it.printf(30, 75, id(font24), TextAlign::TOP_LEFT, "%.0f", id(indoor_pm25).get_raw_state());
+          it.printf(30, 75, id(font24), BLACK, TextAlign::TOP_LEFT, "%.0f", id(indoor_pm25).get_raw_state());
         }
 
         if(id(indoor_pm25).state > $alarm_threshold_indoor_pm25){
-          it.line(0, 100, alarm_underline_width, 100);
+          it.line(0, 100, alarm_underline_width, 100, BLACK);
         }
       }
 
       // Middle Section - Column 2 (Outdoor info)
 
       if(id(outdoor_temp).has_state() && !isnan(id(outdoor_temp).state)){
-        it.print(118, 25, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000e846");
-        it.printf(148, 25, id(font24), TextAlign::TOP_LEFT, "%.1f", id(outdoor_temp).get_raw_state());
+        it.print(118, 25, id(icon_font_24), BLACK, TextAlign::TOP_LEFT, "\U0000e846");
+        it.printf(148, 25, id(font24), BLACK, TextAlign::TOP_LEFT, "%.1f", id(outdoor_temp).get_raw_state());
 
         if(id(outdoor_temp).state > $alarm_threshold_outdoor_high_temp || id(outdoor_temp).state <= $alarm_threshold_outdoor_low_temp){
-          it.line(118, 50, 118+alarm_underline_width, 50);
+          it.line(118, 50, 118+alarm_underline_width, 50, BLACK);
         }
       }
 
       if(id(forecast_precipitation_probability).has_state() && !isnan(id(forecast_precipitation_probability).state)){
-        it.print(118, 50, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000f176");
-        it.printf(148, 50, id(font24), TextAlign::TOP_LEFT, "%.0f", id(forecast_precipitation_probability).state);
+        it.print(118, 50, id(icon_font_24), BLACK, TextAlign::TOP_LEFT, "\U0000f176");
+        it.printf(148, 50, id(font24), BLACK, TextAlign::TOP_LEFT, "%.0f", id(forecast_precipitation_probability).state);
 
         if(id(forecast_precipitation_probability).state > $alarm_threshold_outdoor_pop){
-           it.line(118, 75, 118+alarm_underline_width, 75);
+           it.line(118, 75, 118+alarm_underline_width, 75, BLACK);
         }
       }
 
       if(id(outdoor_aqi).has_state() && !isnan(id(outdoor_aqi).state)){
-        it.print(118, 75, id(icon_font_24), TextAlign::TOP_LEFT, "\U0000f55a");
-        it.printf(148, 75, id(font24), TextAlign::TOP_LEFT, "%.0f", id(outdoor_aqi).state);
+        it.print(118, 75, id(icon_font_24), BLACK, TextAlign::TOP_LEFT, "\U0000f55a");
+        it.printf(148, 75, id(font24), BLACK, TextAlign::TOP_LEFT, "%.0f", id(outdoor_aqi).state);
 
         if(id(outdoor_aqi).state > $alarm_threshold_outdoor_aqi){
-          it.line(118, 100, 118+alarm_underline_width, 100);
+          it.line(118, 100, 118+alarm_underline_width, 100, BLACK);
         }
       }
 
       // Middle Section - Column 3 (Weather Info)
 
       if(id(outdoor_submersion).has_state() && id(outdoor_submersion).state){
-        it.print(227, 25, id(icon_weather_15), TextAlign::TOP_LEFT, ICON_NAME_TO_UNICODE_MAP.at("rainy").c_str());
+        it.print(227, 25, id(icon_weather_15), BLACK, TextAlign::TOP_LEFT, ICON_NAME_TO_UNICODE_MAP.at("rainy").c_str());
       }
 
       bool nightMode = false;
@@ -559,21 +560,21 @@ display:
       if(id(forecast_weather).has_state() && id(forecast_weather).state != ""){
         std::string icon = id(forecast_weather).state;
         if(nightMode && !(icon == "night" || icon == "night-partly-cloudy")){
-            it.print(295, 25, id(icon_font_15), TextAlign::TOP_RIGHT, "\U0000e51c");
+            it.print(295, 25, id(icon_font_15), BLACK, TextAlign::TOP_RIGHT, "\U0000e51c");
         }
 
         std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
-        it.print(261, 50, id(icon_weather_50), TextAlign::CENTER, unicode_icon.c_str());
+        it.print(261, 50, id(icon_weather_50), BLACK, TextAlign::CENTER, unicode_icon.c_str());
       }
 
       if(id(forecast_minimum_temperature).has_state() && !isnan(id(forecast_minimum_temperature).state)
          && id(forecast_maximum_temperature).has_state() && !isnan(id(forecast_maximum_temperature).state)){
-        it.printf(261, 75, id(font24), TextAlign::TOP_CENTER, "%.0f-%.0f", id(forecast_minimum_temperature).state, id(forecast_maximum_temperature).state);
+        it.printf(261, 75, id(font24), BLACK, TextAlign::TOP_CENTER, "%.0f-%.0f", id(forecast_minimum_temperature).state, id(forecast_maximum_temperature).state);
       }
 
       // Bottom Section
       if(id(forecast_short_desc).has_state() && id(forecast_short_desc).state != "" && id(forecast_short_desc).state != "unavailable"){
-        it.printf(148, 112,  id(weather_desc_font), TextAlign::CENTER, id(forecast_short_desc).state.c_str());
+        it.printf(148, 112,  id(weather_desc_font), BLACK, TextAlign::CENTER, id(forecast_short_desc).state.c_str());
       }
 
-      it.printf(294, 124, id(font12), TextAlign::BOTTOM_RIGHT, "%d / %d", id(display_full_update_count), id(display_update_count));
+      it.printf(294, 124, id(font12), BLACK, TextAlign::BOTTOM_RIGHT, "%d / %d", id(display_full_update_count), id(display_update_count));

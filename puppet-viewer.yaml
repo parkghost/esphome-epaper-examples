@@ -12,17 +12,17 @@ substitutions:
 
 external_components:
   - source: github://parkghost/esphome-epaper
-    components: [waveshare_epaper]
+    components: [epaper_spi]
 
 logger:
   level: DEBUG
   # baud_rate: 0
 
 packages:
-  board: !include boards/esp32s3/seeed_xiao_esp32s3_epd_v1.yaml
+  board: !include boards/esp32s3/nologo_esp32_s3_devkitc_1_epd_v1.yaml
   device_web: !include templates/device_standalone.yaml
   epd_toolkit: !include common/epd/toolkit.yaml
-  epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
+  # epd_toolkit_ext: !include common/epd/toolkit_ext.yaml
   debug: !include common/debug_esp32.yaml
   debug_psram: !include common/debug_psram.yaml
 
@@ -250,10 +250,10 @@ select:
     on_value:
       - component.update: puppet_url_composed
       - lambda: |-
-          if (id(display_profile).state != "Custom") {
+          if (id(display_profile).current_option() != "Custom") {
             id(display_profile).publish_state("Custom");
           }
-    
+
   - platform: template
     name: "E-ink Colors"
     id: eink_colors
@@ -267,7 +267,7 @@ select:
     on_value:
       - component.update: puppet_url_composed
       - lambda: |-
-          if (id(display_profile).state != "Custom") {
+          if (id(display_profile).current_option() != "Custom") {
             id(display_profile).publish_state("Custom");
           }
 
@@ -283,7 +283,7 @@ select:
       sorting_weight: -1
     on_value:
       - lambda: |-
-          std::string profile = id(display_profile).state;
+          std::string profile = id(display_profile).current_option();
           if (profile == "Black/White") {
             id(image_format).publish_state("bmp");
             id(eink_colors).publish_state("2");
@@ -306,7 +306,7 @@ select:
       sorting_weight: -1
     on_value:
       - lambda: |-
-          if (id(display_profile).state != "Custom") {
+          if (id(display_profile).current_option() != "Custom") {
             id(display_profile).publish_state("Custom");
           }
 
@@ -442,7 +442,7 @@ script:
           - lambda: |-
               // Update the corresponding image component using composed URL and selected format
               std::string url = id(puppet_url_composed).state;
-              std::string format = id(image_format).state;
+              std::string format = id(image_format).current_option();
               ESP_LOGI("main", "Updating image with URL: %s", url.c_str());
               ESP_LOGI("main", "Using format: %s", format.c_str());
               
@@ -521,7 +521,7 @@ text_sensor:
       url += "?viewport=" + to_string((int)id(viewport_width).state) + "x" + to_string((int)id(viewport_height).state);
       url += "&wait=" + to_string((int)id(extra_wait).state);
       url += "&zoom=" + to_string(id(zoom_level).state);
-      url += "&format=" + id(image_format).state;
+      url += "&format=" + id(image_format).current_option();
       
       if (!id(language).state.empty()) {
         url += "&lang=" + id(language).state;
@@ -538,9 +538,9 @@ text_sensor:
       if (id(invert_colors).state) {
         url += "&invert";
       }
-      
-      if (id(eink_colors).state != "disabled") {
-        url += "&eink=" + id(eink_colors).state;
+
+      if (id(eink_colors).current_option() != "disabled") {
+        url += "&eink=" + id(eink_colors).current_option();
       }
       
       return url;
@@ -557,7 +557,7 @@ font:
     size: 32
 
 display:
-  - platform: waveshare_epaper
+  - platform: epaper_spi
     id: !extend my_display
     model: $display_model
     rotation: $display_rotation
@@ -587,9 +587,9 @@ display:
         return;
       }
       id(initial) = true;
-      
+
       // Get the correct image component based on selected format
-      std::string format = id(image_format).state;
+      std::string format = id(image_format).current_option();
       image::Image* current_image = nullptr;
       
       if (format == "png") {
@@ -603,7 +603,7 @@ display:
       }
       ESP_LOGD("main", "Image format: %s, Image dimensions: %dx%d", format.c_str(), current_image->get_width(), current_image->get_height());
 
-      std::string processing_mode = id(image_processing_mode).state;
+      std::string processing_mode = id(image_processing_mode).current_option();
       ESP_LOGD("main", "Using image processing mode: %s", processing_mode.c_str());
       if (processing_mode == "Direct Output") {
         it.image(0, 0, current_image);

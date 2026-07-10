@@ -8,7 +8,7 @@ substitutions:
 
 external_components:
   - source: github://parkghost/esphome-epaper
-    components: [ waveshare_epaper ]
+    components: [epaper_spi]
 
 packages:
   board: !include ../boards/esp32c3/nologo_esp32c3_super_mini_plus_epd_v1.yaml
@@ -26,7 +26,7 @@ font:
     glyphs: [":0123456789"]
 
 display:
-  - platform: waveshare_epaper
+  - platform: epaper_spi
     id: !extend my_display
     model: $display_model
     rotation: $display_rotation
@@ -35,9 +35,10 @@ display:
     lambda: |-
       int width = it.get_width();
       int height = it.get_height();
+      auto BLACK = Color(0, 0, 0, 0);
       if (id(display_white_screen).state) {
         return;
       }
 
       auto time = id(esp_time).now();
-      it.strftime(width/2, height/2, id(time_font), TextAlign::CENTER, "%H:%M",time);
+      it.strftime(width/2, height/2, id(time_font), BLACK, TextAlign::CENTER, "%H:%M",time);

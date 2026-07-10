@@ -6,7 +6,7 @@ spi:
   mosi_pin: GPIO11
 
 display:
-  - platform: waveshare_epaper
+  - platform: epaper_spi
     id: my_display
     reset_pin: GPIO10
     dc_pin:  GPIO9

@@ -11,7 +11,7 @@ substitutions:
 
 external_components:
   - source: github://parkghost/esphome-epaper
-    components: [ waveshare_epaper ]
+    components: [epaper_spi]
 
 logger:
   level: DEBUG
@@ -145,7 +145,7 @@ spi:
   mosi_pin: GPIO7
 
 display:
-  - platform: waveshare_epaper
+  - platform: epaper_spi
     id: my_display
     reset_pin: GPIO4
     dc_pin:  GPIO3
@@ -158,26 +158,27 @@ display:
     lambda: |-
       int width = it.get_width();
       int height = it.get_height();
+      auto BLACK = Color(0, 0, 0, 0);
 
       // Header
       if(id(wifi_id)->is_connected()){
-        it.printf(0, 0, id(icon_font), TextAlign::TOP_LEFT, "\U0000e63e");
+        it.printf(0, 0, id(icon_font), BLACK, TextAlign::TOP_LEFT, "\U0000e63e");
       }
 
       auto time = id(ntp_time).now();
       if(!time.is_valid()){
-        it.printf(width/2, height/2, id(font24), TextAlign::CENTER, "....");
+        it.printf(width/2, height/2, id(font24), BLACK, TextAlign::CENTER, "....");
         return;
       }
 
       auto now_tm = time.to_c_tm();
-      it.printf(width/2, -4, id(date_week_font), TextAlign::TOP_CENTER, "%d-%d-%d", now_tm.tm_year+1900, now_tm.tm_mon+1, now_tm.tm_mday);
+      it.printf(width/2, -4, id(date_week_font), BLACK, TextAlign::TOP_CENTER, "%d-%d-%d", now_tm.tm_year+1900, now_tm.tm_mon+1, now_tm.tm_mday);
 
       const char* weekdays[] = {"週日", "週一", "週二", "週三", "週四", "週五", "週六"};
       const char* weekday = weekdays[now_tm.tm_wday];
       if(weekday != NULL){
-        it.printf(width-10, -4, id(date_week_font), TextAlign::TOP_RIGHT, weekday);
+        it.printf(width-10, -4, id(date_week_font), BLACK, TextAlign::TOP_RIGHT, weekday);
       }
 
       // Clock
-      it.strftime(width/2, height/2+10, id(time_font), TextAlign::CENTER, "%H:%M", time);
+      it.strftime(width/2, height/2+10, id(time_font), BLACK, TextAlign::CENTER, "%H:%M", time);
