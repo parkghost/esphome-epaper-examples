@@ -39,7 +39,7 @@ globals:
     type: bool
     initial_value: "false"
 
-  - id: day_1_icon
+  - id: day_1_code
     type: std::string
     initial_value: ""
 
@@ -266,27 +266,38 @@ font:
     bpp: 2
     glyphs: "0123456789H"
 
-  - file: "resources/fonts/materialdesignicons.ttf"
+  - file: "resources/fonts/weathericons-regular-webfont.ttf"
     id: icon_weather_font
-    size: 140
+    size: 100
     glyphs: &icon_weather_glyphs
-      - "\U000F0599"  # mdi:weather-sunny
-      - "\U000F0595"  # mdi:weather-partly-cloudy
-      - "\U000F0590"  # mdi:weather-cloudy
-      - "\U000F0596"  # mdi:weather-pouring
-      - "\U000F0F33"  # mdi:weather-partly-rainy
-      - "\U000F0597"  # mdi:weather-rainy
-      - "\U000F067E"  # mdi:weather-lightning-rainy
-      - "\U000F0F32"  # mdi:weather-partly-lightning
-      - "\U000F067F"  # mdi:weather-snowy-rainy
-      - "\U000F0591"  # mdi:weather-fog
-      - "\U000F0598"  # mdi:weather-snowy
-      - "\U000F0594"  # mdi:weather-night
-      - "\U000F0F31"  # mdi:weather-night-partly-cloudy
+      - "\uF00D"  # wi-day-sunny
+      - "\uF00C"  # wi-day-sunny-overcast
+      - "\uF002"  # wi-day-cloudy
+      - "\uF013"  # wi-cloudy
+      - "\uF009"  # wi-day-showers
+      - "\uF00B"  # wi-day-sprinkle
+      - "\uF008"  # wi-day-rain
+      - "\uF00E"  # wi-day-storm-showers
+      - "\uF010"  # wi-day-thunderstorm
+      - "\uF0B2"  # wi-day-sleet
+      - "\uF003"  # wi-day-fog
+      - "\uF014"  # wi-fog
+      - "\uF00A"  # wi-day-snow
+      - "\uF02E"  # wi-night-clear
+      - "\uF081"  # wi-night-alt-partly-cloudy
+      - "\uF086"  # wi-night-alt-cloudy
+      - "\uF029"  # wi-night-alt-showers
+      - "\uF02B"  # wi-night-alt-sprinkle
+      - "\uF028"  # wi-night-alt-rain
+      - "\uF02C"  # wi-night-alt-storm-showers
+      - "\uF02D"  # wi-night-alt-thunderstorm
+      - "\uF0B4"  # wi-night-alt-sleet
+      - "\uF04A"  # wi-night-fog
+      - "\uF02A"  # wi-night-alt-snow
 
-  - file: "resources/fonts/materialdesignicons.ttf"
+  - file: "resources/fonts/weathericons-regular-webfont.ttf"
     id: icon_weather_font_sm
-    size: 30
+    size: 22
     bpp: 2
     glyphs: *icon_weather_glyphs
 
@@ -335,38 +346,6 @@ display:
 
       const auto &data_7d = id(town_forecast_7d).get_data();
 
-      const std::map<std::string, std::string> ICON_NAME_TO_UNICODE_MAP {
-        {"sunny","\U000F0599"},
-        {"partly-cloudy","\U000F0595"},
-        {"cloudy","\U000F0590"},
-        {"pouring","\U000F0596"},
-        {"partly-rainy","\U000F0F33"},
-        {"rainy","\U000F0597"},
-        {"lightning-rainy","\U000F067E"},
-        {"partly-lightning","\U000F0F32"},
-        {"snowy-rainy","\U000F067F"},
-        {"fog","\U000F0591"},
-        {"snowy","\U000F0598"},
-        {"night","\U000F0594"},
-        {"night-partly-cloudy","\U000F0F31"},
-      };
-
-      const std::map<std::string, bool> WEATHER_ICON_HIGHLIGHT {
-        {"sunny", false},
-        {"partly-cloudy", false},
-        {"cloudy", false},
-        {"pouring", true},
-        {"partly-rainy", true},
-        {"rainy", true},
-        {"lightning-rainy", true},
-        {"partly-lightning", true},
-        {"snowy-rainy", true},
-        {"fog", true},
-        {"snowy", true},
-        {"night", false},
-        {"night-partly-cloudy", false},
-      };
-
       const char *months[] = {"一", "二", "三", "四", "五", "六", "七", "八", "九", "十", "十一", "十二"};
       const char *weekdays[] = {"日", "一", "二", "三", "四", "五", "六"};
 
@@ -396,15 +375,13 @@ display:
       start_y = top_offset;
       block_width = width - left_offset;
       block_height = 200;
-      std::string icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, true, now_tm, ""); // default to empty string
-      std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
-      bool highlight = WEATHER_ICON_HIGHLIGHT.find(icon) != WEATHER_ICON_HIGHLIGHT.end() ? WEATHER_ICON_HIGHLIGHT.find(icon)->second : false;
+      auto wi_now = data_7d.find_weather_icon(true, now_tm);
       std::string min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, true, now_tm);
       std::string max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, true, now_tm);
       std::string pop_12 = data_7d.find_value(ElementValueKey::PROBABILITY_OF_PRECIPITATION, true, now_tm);
       std::string weather_desc = data_7d.find_value(ElementValueKey::WEATHER, true, now_tm);
       start_y -= 5;
-      it.printf(start_x + block_width / 2, start_y, id(icon_weather_font), highlight ? $highlight_color : BLACK, TextAlign::TOP_CENTER, unicode_icon.c_str());
+      it.printf(start_x + block_width / 2, start_y, id(icon_weather_font), weather_code_highlight(wi_now.code) ? $highlight_color : BLACK, TextAlign::TOP_CENTER, wi_now.unicode);
       start_y += 145;
       start_x += 18;
       it.printf(start_x, start_y + 3, id(icon_font), BLACK, TextAlign::TOP_LEFT, "\U000F050F");
@@ -445,41 +422,42 @@ display:
           noon.tm_sec = 0;
           std::mktime(&noon);
           auto esp_noon = tm_to_esptime(noon);
-          std::string icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, false, noon, ""); // default to empty string
+          std::string code = data_7d.find_weather_icon(false, noon).code;
           std::string min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, false, noon);
           std::string max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, false, noon);
 
           // fallback if no data available
           if (d == 0) {
             std::string date_str = now.strftime("%Y%m%d");
-            if (icon != "") {
+            if (code != "") {
               // cache the first day's data
-              id(day_1_icon) = icon;
+              id(day_1_code) = code;
               id(day_1_min_temp) = min_temp;
               id(day_1_max_temp) = max_temp;
               id(day_1_date) = date_str;
-            } else if (icon == "" && id(day_1_icon) != "" && id(day_1_date) == date_str) {
+            } else if (code == "" && id(day_1_code) != "" && id(day_1_date) == date_str) {
               // fallback to cached data if available
-              icon = id(day_1_icon);
+              code = id(day_1_code);
               min_temp = id(day_1_min_temp);
               max_temp = id(day_1_max_temp);
-              ESP_LOGW("main", "Day 1: Fallback to cached data: icon=%s min_temp=%s max_temp=%s", icon.c_str(), min_temp.c_str(), max_temp.c_str());
+              ESP_LOGW("main", "Day 1: Fallback to cached data: code=%s min_temp=%s max_temp=%s", code.c_str(), min_temp.c_str(), max_temp.c_str());
             } else {
               // fallback to the first available data
-              icon = data_7d.find_value(ElementValueKey::WEATHER_ICON, true, now_tm, ""); // default to empty string
+              code = data_7d.find_weather_icon(true, now_tm).code;
               min_temp = data_7d.find_value(ElementValueKey::MIN_TEMPERATURE, true, now_tm);
               max_temp = data_7d.find_value(ElementValueKey::MAX_TEMPERATURE, true, now_tm);
-              ESP_LOGW("main", "Day 1: Fallback to first available data: icon=%s min_temp=%s max_temp=%s", icon.c_str(), min_temp.c_str(), max_temp.c_str());
+              ESP_LOGW("main", "Day 1: Fallback to first available data: code=%s min_temp=%s max_temp=%s", code.c_str(), min_temp.c_str(), max_temp.c_str());
             }
           }
 
-          std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
-          bool highlight = WEATHER_ICON_HIGHLIGHT.find(icon) != WEATHER_ICON_HIGHLIGHT.end() ? WEATHER_ICON_HIGHLIGHT.find(icon)->second : false;
+          // 7-day cells represent the noon slot, so always use daytime glyphs
+          const char *unicode_icon = find_weather_icon_unicode(code.c_str(), true);
+          bool highlight = weather_code_highlight(code.c_str());
           start_x = left_offset;
           start_y = top_offset;
           it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(week_font_sm), BLACK, TextAlign::CENTER, "週%s", weekdays[noon.tm_wday]);
           start_y += cell_h + 3;
-          it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(icon_weather_font_sm), highlight ? $highlight_color : BLACK, TextAlign::CENTER, unicode_icon.c_str());
+          it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(icon_weather_font_sm), highlight ? $highlight_color : BLACK, TextAlign::CENTER, unicode_icon);
           start_y += cell_h;
           it.printf(start_x + (d + 0.5) * cell_w, start_y + cell_h / 2, id(font_18), BLACK, TextAlign::CENTER, "%s·%s", min_temp.c_str(), max_temp.c_str());
         }
@@ -508,11 +486,8 @@ display:
           period_time.tm_hour += p * 3;
           std::mktime(&period_time);
 
-          std::string icon = data_3d.find_value(ElementValueKey::WEATHER_ICON, false, period_time, "");
+          auto wi = data_3d.find_weather_icon(false, period_time);
           std::string pop = data_3d.find_value(ElementValueKey::PROBABILITY_OF_PRECIPITATION, false, period_time);
-
-          std::string unicode_icon = ICON_NAME_TO_UNICODE_MAP.find(icon) != ICON_NAME_TO_UNICODE_MAP.end() ? ICON_NAME_TO_UNICODE_MAP.find(icon)->second : std::string("");
-          bool highlight = WEATHER_ICON_HIGHLIGHT.find(icon) != WEATHER_ICON_HIGHLIGHT.end() ? WEATHER_ICON_HIGHLIGHT.find(icon)->second : false;
 
           start_x = left_offset;
           start_y = top_offset;
@@ -520,7 +495,7 @@ display:
           it.printf(start_x + (p + 0.5) * cell_w, start_y + cell_h / 2, id(hour_font_sm), BLACK, TextAlign::CENTER, "%02dH", period_time.tm_hour);
           start_y += cell_h + 3;
           // Weather icon
-          it.printf(start_x + (p + 0.5) * cell_w, start_y + cell_h / 2, id(icon_weather_font_sm), highlight ? $highlight_color : BLACK, TextAlign::CENTER, unicode_icon.c_str());
+          it.printf(start_x + (p + 0.5) * cell_w, start_y + cell_h / 2, id(icon_weather_font_sm), weather_code_highlight(wi.code) ? $highlight_color : BLACK, TextAlign::CENTER, wi.unicode);
           start_y += cell_h;
           // Rain probability
           it.printf(start_x + (p + 0.5) * cell_w, start_y + cell_h / 2, id(font_18), BLACK, TextAlign::CENTER, "\U000F0597%2s%%", pop.c_str());
